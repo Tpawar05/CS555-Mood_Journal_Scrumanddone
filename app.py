@@ -13,10 +13,17 @@ db.init_app(app)
 from models import MoodEntry  # noqa: E402
 
 @app.route('/')
+def login():
+    return render_template('home/index.html', page_id='home')
+
+@app.route('/home')
 def home():
     return render_template('home/index.html', page_id='home')
 
 
+@app.route('/logs')
+def logs():
+    return render_template('mood_journal/logs.html', page_id='home')
 
 @app.route("/mood-journal", methods=["GET", "POST"])
 def mood_journal():
@@ -58,8 +65,6 @@ def mood_journal():
 
     entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
     return render_template("mood_journal/index.html", entries=entries)
-
-
 
 def init_db():
     with app.app_context():
