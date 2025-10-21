@@ -37,20 +37,8 @@ def mood_journal():
     entries = MoodEntry.query.order_by(MoodEntry.created_at.desc()).all()
     return render_template('apps/mood_journal/index.html', page_id='mood-journal', entries=entries)
 
-@app.route('/logs', methods=['GET', 'POST'])
+@app.route('/logs', methods=['GET'])
 def logs():
-    if request.method == 'POST':
-        mood = request.form.get('mood', '').strip()
-        notes = request.form.get('notes', '').strip()
-
-        if mood:
-            entry = MoodEntry(mood=mood, notes=notes or None)
-            db.session.add(entry)
-            db.session.commit()
-
-        return redirect(url_for('logs'))
-
-
     entries = MoodEntry.query.order_by(MoodEntry.created_at.desc()).all()
     return render_template('apps/mood_journal/logs.html', page_id='mood-journal', entries=entries)
 
