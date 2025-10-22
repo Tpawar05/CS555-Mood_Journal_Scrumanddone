@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Mood Journal • Student Starter Pack{% endblock %}
+
+{% block extra_head %}
+<style>
+    @keyframes float {
+        0% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(5deg); }
+        100% { transform: translateY(0px) rotate(0deg); }
+    }
+    .float-animation {
+        animation: float 4s ease-in-out infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex items-center gap-4 mb-4">
+        <div class="p-3 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl text-white float-animation">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <div>
+            <h2 class="text-3xl font-bold text-gray-900">Mood Journal</h2>
+            <p class="text-gray-600">Your emotional landscape, beautifully tracked</p>
+        </div>
+    </div>
+</div>
+
+<div class="bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 rounded-xl p-6 mb-8 border border-amber-200">
+    <div class="flex items-start gap-3">
+        <span class="text-2xl">🌈</span>
+        <div>
+            <h3 class="font-semibold text-gray-900 mb-1">Dreamy Reflections</h3>
+            <p class="text-gray-600 text-sm">
+                A soft, calming space for emotional awareness and self-reflection.
+            </p>
+        </div>
+    </div>
+</div>
+
+
+
+    <!-- Right: Mood History -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🌙</span>
+                <h3 class="text-lg font-semibold text-gray-900">Your Journey</h3>
+            </div>
+            {% if entries %}
+            <span class="text-sm text-gray-500">{{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}</span>
+            {% endif %}
+        </div>
+
+        {% if entries %}
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+                {% for entry in entries %}
+                <div class="group relative p-4 rounded-xl border-l-4 bg-gradient-to-r from-white to-gray-50 hover:shadow-md transition-all duration-200
+                    {% if entry.rating >= 8 %}border-green-400 hover:from-green-50 hover:to-emerald-50
+                    {% elif entry.rating >= 5 %}border-yellow-400 hover:from-yellow-50 hover:to-amber-50
+                    {% else %}border-red-400 hover:from-red-50 hover:to-pink-50{% endif %}">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">
+                                {% if entry.rating >= 8 %}😄
+                                {% elif entry.rating >= 5 %}🙂
+                                {% else %}😢{% endif %}
+                            </span>
+                            <div>
+                                <span class="font-medium text-gray-900">{{ entry.title }}</span>
+                                <span class="text-xs text-gray-500 ml-1">(Rating: {{ entry.rating }}/10)</span>
+                                <p class="text-xs text-gray-500">{{ entry.date.strftime('%A, %b %d') }}</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-400">{{ entry.timestamp.strftime('%I:%M %p') }}</span>
+                    </div>
+
+                    {% if entry.notes %}
+                        <p class="text-sm text-gray-600 ml-11 italic">{{ entry.notes }}</p>
+                    {% else %}
+                        <p class="text-sm text-gray-400 ml-11 italic">Silent reflection</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-12">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full mb-4">
+                    <span class="text-2xl">☁️</span>
+                </div>
+                <p class="text-gray-500 mb-2">No entries yet</p>
+                <p class="text-sm text-gray-400">
+Beginning emotional reflection is not a judgment, but a gentle greeting. It is the quiet courage to sit with yourself and simply say, 'I am here, and I am ready to listen.'                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-8 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl p-8 text-white">
+    <div class="max-w-3xl mx-auto text-center">
+        <h3 class="text-2xl font-bold mb-2">Mindfulness Tip</h3>
+        <p class="opacity-90">
+            Taking just 5 minutes each day to check in with your emotions can improve self-awareness and emotional regulation by up to 40%. Click on "Track Moods" on the home page to begin
+        </p>
+    </div>
+</div>
+{% endblock %}

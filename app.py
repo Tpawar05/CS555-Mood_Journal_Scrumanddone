@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for
 import os
+
 from extensions import db
-from models import MoodEntry  # noqa: E402
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
@@ -10,79 +11,67 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-# ---------- ROUTES ----------
+from models import MoodEntry  # noqa: E402
 
-# Login page (root)
 @app.route('/')
-def home():
-    return render_template('login.html', page_id='home')
-
-
-# Handle login form submission
-@app.route('/login', methods=['POST'])
 def login():
-    username = request.form.get('username')
-    password = request.form.get('password')
+    return render_template('home/index.html', page_id='home')
 
-    # Simple authentication check
-    if username == 'username' and password == 'password':
-        session['user'] = username  # store session info
-        return redirect('/home/index.html')
-    else:
-        return render_template('login.html', error='Invalid username or password')
+@app.route('/home')
+def home():
+    return render_template('home/index.html', page_id='home')
 
 
-# Home page (after login)
-@app.route('/home/index.html')
-def home_index():
-    # Optional: restrict access if not logged in
-    if 'user' not in session:
-        return redirect('/')
-    return render_template('home/index.html')
+@app.route('/logs')
+def logs():
+    return render_template('mood_journal/logs.html', page_id='home')
 
-
-# Mood Journal Page
-@app.route('/mood-journal', methods=['GET', 'POST'])
+@app.route("/mood-journal", methods=["GET", "POST"])
 def mood_journal():
-    # Require login
-    if 'user' not in session:
-        return redirect('/')
+    from datetime import datetime
 
-    if request.method == 'POST':
-        mood = request.form.get('mood', '').strip()
-        notes = request.form.get('notes', '').strip()
+    if request.method == "POST":
+        title = request.form.get("title")
+        date_str = request.form.get("date")
+        rating = int(request.form.get("rating", 5))
+        notes = request.form.get("notes")
 
-        if mood:
-            entry = MoodEntry(mood=mood, notes=notes or None)
-            db.session.add(entry)
-            db.session.commit()
+        # Convert date string to Python date
+        entry_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.utcnow().date()
 
-        return redirect(url_for('mood_journal'))
+        # Convert numeric rating to mood label
+        if rating <= 2:
+            mood = "Terrible"
+        elif rating <= 4:
+            mood = "Bad"
+        elif rating == 5:
+            mood = "Neutral"
+        elif rating <= 7:
+            mood = "Good"
+        elif rating <= 9:
+            mood = "Excellent"
+        else:
+            mood = "Amazing"
 
-    entries = MoodEntry.query.order_by(MoodEntry.created_at.desc()).all()
-    return render_template(
-        'apps/mood_journal/index.html',
-        page_id='mood-journal',
-        entries=entries
-    )
+        new_entry = MoodEntry(
+            title=title,
+            date=entry_date,
+            rating=rating,
+            mood=mood,
+            notes=notes
+        )
+        db.session.add(new_entry)
+        db.session.commit()
+        return redirect("/mood-journal")
 
+    entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
+    return render_template("mood_journal/index.html", entries=entries)
 
-# Logout route
-@app.route('/logout')
-def logout():
-    session.pop('user', None)
-    return redirect('/')
-
-
-# ---------- DATABASE SETUP ----------
 def init_db():
     with app.app_context():
         db.create_all()
 
-
-# ---------- RUN APP ----------
 if __name__ == '__main__':
     if not os.path.exists('app.db'):
         init_db()
     app.run(debug=True)
-

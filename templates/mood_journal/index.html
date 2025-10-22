@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Mood Journal • Student Starter Pack{% endblock %}
+
+{% block extra_head %}
+<style>
+    @keyframes float {
+        0% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(5deg); }
+        100% { transform: translateY(0px) rotate(0deg); }
+    }
+    .float-animation {
+        animation: float 4s ease-in-out infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex items-center gap-4 mb-4">
+        <div class="p-3 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl text-white float-animation">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <div>
+            <h2 class="text-3xl font-bold text-gray-900">Mood Journal</h2>
+            <p class="text-gray-600">Your emotional landscape, beautifully tracked</p>
+        </div>
+    </div>
+</div>
+
+<div class="bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 rounded-xl p-6 mb-8 border border-amber-200">
+    <div class="flex items-start gap-3">
+        <span class="text-2xl">🌈</span>
+        <div>
+            <h3 class="font-semibold text-gray-900 mb-1">Dreamy Reflections</h3>
+            <p class="text-gray-600 text-sm">
+                A soft, calming space for emotional awareness and self-reflection.
+                Track your moods with a gentle, supportive interface that celebrates all feelings.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-8">
+    <!-- Left: Mood Input Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="flex items-center gap-2 mb-6">
+            <span class="text-xl">✨</span>
+            <h3 class="text-lg font-semibold text-gray-900">Add a New Entry</h3>
+        </div>
+
+        <form method="POST" action="/mood-journal" class="space-y-6">
+
+            <!-- Title -->
+            <div>
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                <input id="title" name="title" type="text" required
+                    class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Give your entry a short title (e.g., Morning Reflection)">
+            </div>
+
+            <!-- Date -->
+            <div>
+                <label for="date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input id="date" name="date" type="date"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    value="{{ current_date }}">
+            </div>
+
+            <!-- Mood Slider -->
+            <div>
+                <label for="rating" class="block text-sm font-medium text-gray-700 mb-2">
+                    💫 Mood Rating (1–10)
+                </label>
+                <input
+                    type="range"
+                    id="rating"
+                    name="rating"
+                    min="1"
+                    max="10"
+                    value="5"
+                    oninput="updateMoodLabel(this.value)"
+                    class="w-full accent-amber-500 cursor-pointer"
+                >
+                <p id="rating-label" class="text-center font-semibold text-gray-800 mt-2">5 – Neutral 😐</p>
+                <p class="text-xs text-gray-500 text-center mt-1">
+                    Slide to reflect your current mood
+                </p>
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+                    Thoughts & Reflections
+                </label>
+                <textarea id="notes" name="notes" rows="4"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
+                    placeholder="What's coloring your mood today? What are you grateful for?"></textarea>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit"
+                class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transform hover:scale-[1.02] transition-all duration-200 shadow-lg">
+                💜 Save This Moment
+            </button>
+        </form>
+
+        <script>
+            function updateMoodLabel(value) {
+                const label = document.getElementById("rating-label");
+                const moods = [
+                    "1 – Terrible 😢", "2 – Bad 😔", "3 – Low 😞",
+                    "4 – Meh 😕", "5 – Neutral 😐", "6 – Okay 🙂",
+                    "7 – Good 😊", "8 – Great 😄", "9 – Excellent 🌟", "10 – Amazing 🤩"
+                ];
+                label.textContent = moods[value - 1];
+            }
+        </script>
+    </div>
+
+    <!-- Right: Mood History -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🌙</span>
+                <h3 class="text-lg font-semibold text-gray-900">Your Journey</h3>
+            </div>
+            {% if entries %}
+            <span class="text-sm text-gray-500">{{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}</span>
+            {% endif %}
+        </div>
+
+        {% if entries %}
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+                {% for entry in entries %}
+                <div class="group relative p-4 rounded-xl border-l-4 bg-gradient-to-r from-white to-gray-50 hover:shadow-md transition-all duration-200
+                    {% if entry.rating >= 8 %}border-green-400 hover:from-green-50 hover:to-emerald-50
+                    {% elif entry.rating >= 5 %}border-yellow-400 hover:from-yellow-50 hover:to-amber-50
+                    {% else %}border-red-400 hover:from-red-50 hover:to-pink-50{% endif %}">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">
+                                {% if entry.rating >= 8 %}😄
+                                {% elif entry.rating >= 5 %}🙂
+                                {% else %}😢{% endif %}
+                            </span>
+                            <div>
+                                <span class="font-medium text-gray-900">{{ entry.title }}</span>
+                                <span class="text-xs text-gray-500 ml-1">(Rating: {{ entry.rating }}/10)</span>
+                                <p class="text-xs text-gray-500">{{ entry.date.strftime('%A, %b %d') }}</p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-400">{{ entry.timestamp.strftime('%I:%M %p') }}</span>
+                    </div>
+
+                    {% if entry.notes %}
+                        <p class="text-sm text-gray-600 ml-11 italic">{{ entry.notes }}</p>
+                    {% else %}
+                        <p class="text-sm text-gray-400 ml-11 italic">Silent reflection</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-12">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full mb-4">
+                    <span class="text-2xl">☁️</span>
+                </div>
+                <p class="text-gray-500 mb-2">No entries yet</p>
+                <p class="text-sm text-gray-400">
+                    Begin your emotional journey. Each entry creates a beautiful tapestry of your inner world.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-8 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl p-8 text-white">
+    <div class="max-w-3xl mx-auto text-center">
+        <h3 class="text-2xl font-bold mb-2">Mindfulness Tip</h3>
+        <p class="opacity-90">
+            Taking just 5 minutes each day to check in with your emotions can improve self-awareness and emotional regulation by up to 40%.
+        </p>
+    </div>
+</div>
+{% endblock %}
