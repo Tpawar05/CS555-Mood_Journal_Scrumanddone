@@ -1,3 +1,4 @@
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask import Flask, render_template, request, redirect, url_for
 import os
 
@@ -12,18 +13,38 @@ db.init_app(app)
 
 from models import MoodEntry  # noqa: E402
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def login():
-    return render_template('home/index.html', page_id='home')
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # Simple static credentials for testing
+        if username == 'username' and password == 'password':
+            session['logged_in'] = True
+            return redirect(url_for('home'))
+        else:
+            flash('Invalid username or password', 'error')
+            return redirect(url_for('login'))  # 👈 redirect back to '/' route
+
+    return render_template('home/login.html')
+
 
 @app.route('/home')
 def home():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))  # 👈 ensure redirects to '/'
     return render_template('home/index.html', page_id='home')
-
 
 @app.route('/logs')
 def logs():
     return render_template('mood_journal/logs.html', page_id='home')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 
 @app.route("/mood-journal", methods=["GET", "POST"])
 def mood_journal():
