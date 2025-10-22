@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask import Flask, render_template, request, redirect, url_for
 import os
-
 from extensions import db
 
 app = Flask(__name__)
@@ -11,7 +10,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-from models import MoodEntry  # noqa: E402
+from models import MoodEntry  
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
