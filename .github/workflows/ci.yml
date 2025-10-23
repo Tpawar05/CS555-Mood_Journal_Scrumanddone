@@ -28,7 +28,7 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v4
       with:
-        enable-cache: true
+        enable-cache: false
 
     - name: Install dependencies
       run: uv sync
@@ -144,4 +144,4 @@ jobs:
       continue-on-error: true
 
     - name: Build success
-      run: echo "✅ Build completed successfully!"
+      run: echo "Build completed successfully!"
