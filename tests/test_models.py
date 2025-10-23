@@ -1,6 +1,6 @@
 from datetime import date
 from models import MoodEntry
-from app import db
+from extensions import db
 
 
 def test_mood_entry_model_creation(app):
