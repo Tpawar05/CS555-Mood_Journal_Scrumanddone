@@ -6,7 +6,6 @@ This version ensures CI runs all tests in-memory and isolated.
 import pytest
 from app import app as flask_app
 from extensions import db
-from models import MoodEntry
 
 
 @pytest.fixture(scope="session")
@@ -40,6 +39,8 @@ def clear_db(app):
     """Clear all data between tests to ensure isolation."""
     yield
     with app.app_context():
+        # Import here to avoid early database access
+        from models import MoodEntry
         # Clean up all tables after each test
         db.session.query(MoodEntry).delete()
         db.session.commit()
