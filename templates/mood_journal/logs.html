@@ -44,7 +44,6 @@
 </div>
 
 
-
     <!-- Right: Mood History -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div class="flex items-center justify-between mb-6">
@@ -61,20 +60,20 @@
             <div class="space-y-3 max-h-96 overflow-y-auto">
                 {% for entry in entries %}
                 <div class="group relative p-4 rounded-xl border-l-4 bg-gradient-to-r from-white to-gray-50 hover:shadow-md transition-all duration-200
-                    {% if entry.rating >= 8 %}border-green-400 hover:from-green-50 hover:to-emerald-50
-                    {% elif entry.rating >= 5 %}border-yellow-400 hover:from-yellow-50 hover:to-amber-50
+                    {% if entry.mood_rating >= 8 %}border-green-400 hover:from-green-50 hover:to-emerald-50
+                    {% elif entry.mood_rating >= 5 %}border-yellow-400 hover:from-yellow-50 hover:to-amber-50
                     {% else %}border-red-400 hover:from-red-50 hover:to-pink-50{% endif %}">
                     <div class="flex items-start justify-between mb-2">
                         <div class="flex items-center gap-3">
                             <span class="text-2xl">
-                                {% if entry.rating >= 8 %}😄
-                                {% elif entry.rating >= 5 %}🙂
+                                {% if entry.mood_rating >= 8 %}😄
+                                {% elif entry.mood_rating >= 5 %}🙂
                                 {% else %}😢{% endif %}
                             </span>
                             <div>
-                                <span class="font-medium text-gray-900">{{ entry.title }}</span>
-                                <span class="text-xs text-gray-500 ml-1">(Rating: {{ entry.rating }}/10)</span>
-                                <p class="text-xs text-gray-500">{{ entry.date.strftime('%A, %b %d') }}</p>
+                                <span class="font-medium text-gray-900">{{ entry.mood_label }}</span>
+                                <span class="text-xs text-gray-500 ml-1">(Rating: {{ entry.mood_rating }}/10)</span>
+                                <p class="text-xs text-gray-500">{{ entry.entry_date.strftime('%A, %b %d') }}</p>
                             </div>
                         </div>
                         <span class="text-xs text-gray-400">{{ entry.timestamp.strftime('%I:%M %p') }}</span>
@@ -95,10 +94,18 @@
                 </div>
                 <p class="text-gray-500 mb-2">No entries yet</p>
                 <p class="text-sm text-gray-400">
-Beginning emotional reflection is not a judgment, but a gentle greeting. It is the quiet courage to sit with yourself and simply say, 'I am here, and I am ready to listen.'                </p>
+                    Beginning emotional reflection is not a judgment, but a gentle greeting. 
+                    It is the quiet courage to sit with yourself and simply say, 
+                    "I am here, and I am ready to listen."
+                </p>
             </div>
         {% endif %}
     </div>
+
+
+
+
+
 </div>
 
 <div class="mt-8 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl p-8 text-white">

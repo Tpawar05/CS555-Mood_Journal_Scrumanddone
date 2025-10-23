@@ -5,7 +5,8 @@ from extensions import db
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -37,7 +38,8 @@ def home():
 
 @app.route('/logs')
 def logs():
-    return render_template('mood_journal/logs.html', page_id='home')
+    entries =MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
+    return render_template('mood_journal/logs.html', entries=entries, page_id='home')
 
 @app.route('/logout')
 def logout():
@@ -50,16 +52,19 @@ def mood_journal():
     from datetime import datetime
 
     if request.method == "POST":
-        title = request.form.get("title")
+        # Grab form data
+        title = request.form.get("title")  # from the HTML form
         date_str = request.form.get("date")
-        rating = int(request.form.get("rating", 5))
+        rating = int(request.form.get("mood_rating", 5))
         notes = request.form.get("notes")
 
         # Convert date string to Python date
         entry_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.utcnow().date()
 
-        # Convert numeric rating to mood label
-        if rating <= 2:
+        # If title provided, use it as label; else derive label from rating
+        if title:
+            mood = title.strip()
+        elif rating <= 2:
             mood = "Terrible"
         elif rating <= 4:
             mood = "Bad"
@@ -72,19 +77,23 @@ def mood_journal():
         else:
             mood = "Amazing"
 
+        # Create and save new entry
         new_entry = MoodEntry(
-            title=title,
-            date=entry_date,
-            rating=rating,
-            mood=mood,
+            user_id=1,  # placeholder until auth is connected
+            entry_date=entry_date,
+            mood_rating=rating,
+            mood_label=mood,
             notes=notes
         )
+
         db.session.add(new_entry)
         db.session.commit()
         return redirect("/mood-journal")
 
+    # Display entries
     entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
     return render_template("mood_journal/index.html", entries=entries)
+
 
 def init_db():
     with app.app_context():
