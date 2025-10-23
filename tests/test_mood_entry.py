@@ -4,6 +4,15 @@ from datetime import date
 from extensions import db
 
 
+@pytest.fixture(autouse=True)
+def clear_db(client):
+    """Clear database before each test"""
+    yield
+    # Cleanup after test
+    db.session.query(MoodEntry).delete()
+    db.session.commit()
+
+
 def test_add_entry_persists_no_duplicates(client):
     """Confirm that entries are stored correctly and not duplicated"""
     # client fixture already has app context from conftest.py
