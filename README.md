@@ -23,5 +23,11 @@ Users can log daily mood entries, track habits, record expenses, and save recipe
 - Python 3.9+  
 - pip for package management  
 
+### Initialize the database
+After cloning and setting up the environment, run:
+```bash
+python init_db.py
+
+
 ### Running the project
 ## run "uv run python app.py" in the terminal to start the project
