@@ -16,7 +16,7 @@ def app():
     """
     flask_app.config.update(
         TESTING=True,
-        SQLALCHEMY_DATABASE_URI="sqlite://",  # no :memory:, single shared connection
+        SQLALCHEMY_DATABASE_URI="sqlite:///:memory:",  # Added :memory: here
         SQLALCHEMY_ENGINE_OPTIONS={"connect_args": {"check_same_thread": False}},
     )
 
