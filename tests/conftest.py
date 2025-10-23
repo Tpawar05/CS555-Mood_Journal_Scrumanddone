@@ -6,6 +6,7 @@ This version ensures CI runs all tests in-memory and isolated.
 import pytest
 from app import app as flask_app
 from extensions import db
+from models import MoodEntry
 
 
 @pytest.fixture(scope="session")
@@ -16,7 +17,7 @@ def app():
     """
     flask_app.config.update(
         TESTING=True,
-        SQLALCHEMY_DATABASE_URI="sqlite:///:memory:",  # Added :memory: here
+        SQLALCHEMY_DATABASE_URI="sqlite:///:memory:",
         SQLALCHEMY_ENGINE_OPTIONS={"connect_args": {"check_same_thread": False}},
     )
 
@@ -32,3 +33,13 @@ def client(app):
     """Provides a Flask test client for HTTP requests."""
     with app.test_client() as client:
         yield client
+
+
+@pytest.fixture(autouse=True)
+def clear_db(app):
+    """Clear all data between tests to ensure isolation."""
+    yield
+    with app.app_context():
+        # Clean up all tables after each test
+        db.session.query(MoodEntry).delete()
+        db.session.commit()
