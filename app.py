@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from flask import Flask, render_template, request, redirect, url_for
 import os
 from extensions import db
 
@@ -16,6 +15,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 from models import MoodEntry  
+
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -40,10 +40,22 @@ def home():
         return redirect(url_for('login'))  # 👈 ensure redirects to '/'
     return render_template('home/index.html', page_id='home')
 
+
 @app.route('/logs')
 def logs():
-    entries =MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
+    entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
     return render_template('mood_journal/logs.html', entries=entries, page_id='home')
+
+
+# 🧩 NEW: Delete Entry route (US-07)
+@app.route('/delete/<int:entry_id>', methods=['POST'])
+def delete_entry(entry_id):
+    entry = MoodEntry.query.get_or_404(entry_id)
+    db.session.delete(entry)
+    db.session.commit()
+    flash('Entry deleted successfully!')
+    return redirect(url_for('logs'))
+
 
 @app.route('/logout')
 def logout():
@@ -102,6 +114,7 @@ def mood_journal():
 def init_db():
     with app.app_context():
         db.create_all()
+
 
 if __name__ == '__main__':
     if not os.path.exists('app.db'):
