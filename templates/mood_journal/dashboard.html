@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Mood Dashboard</h2>
+    
+    <!-- Mood Summary Section -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Monthly Overview</h5>
+                    <div class="d-flex align-items-center">
+                        <p class="card-text mb-0">Average Mood: <strong>{{ average_mood|round(1) }}</strong></p>
+                        <div class="ms-3" aria-hidden="true">
+                            {% set avg_int = (average_mood|round(0))|int %}
+                            {% if avg_int <= 1 %}
+                                <span title="Terrible">😭</span>
+                            {% elif avg_int == 2 %}
+                                <span title="Bad">☹️</span>
+                            {% elif avg_int == 3 %}
+                                <span title="Neutral">😐</span>
+                            {% elif avg_int == 4 %}
+                                <span title="Good">🙂</span>
+                            {% else %}
+                                <span title="Excellent">😄</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p class="card-text">Total Entries: {{ total_entries }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Monthly Calendar</h5>
+                    <div class="calendar-container">
+                        <div class="calendar-header">
+                            <button class="btn btn-link" onclick="previousMonth()">&lt;</button>
+                            <h3 id="currentMonth">{{ current_month }}</h3>
+                            <button class="btn btn-link" onclick="nextMonth()">&gt;</button>
+                        </div>
+                        <table class="table table-bordered calendar">
+                            <thead>
+                                <tr>
+                                    <th>Sun</th>
+                                    <th>Mon</th>
+                                    <th>Tue</th>
+                                    <th>Wed</th>
+                                    <th>Thu</th>
+                                    <th>Fri</th>
+                                    <th>Sat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="calendarBody">
+                                {% for week in calendar_dates %}
+                                <tr>
+                                    {% for date, mood in week %}
+                                        {% if date %}
+                                            <td class="calendar-day {% if mood %}mood-{{ mood }}{% endif %}"
+                                                data-date="{{ date.strftime('%Y-%m-%d') }}">
+                                                {{ date.day }}
+                                                            {% if mood %}
+                                                                {# map numeric mood to emoji #}
+                                                                <div class="mood-emoji" title="Mood: {{ mood }}">
+                                                                    {% if mood == 1 %}😭
+                                                                    {% elif mood == 2 %}☹️
+                                                                    {% elif mood == 3 %}😐
+                                                                    {% elif mood == 4 %}🙂
+                                                                    {% else %}😄
+                                                                    {% endif %}
+                                                                </div>
+                                                            {% endif %}
+                                            </td>
+                                        {% else %}
+                                            <td></td>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block styles %}
+<style>
+.calendar-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.calendar td {
+    height: 100px;
+    width: 14.28%;
+    vertical-align: top;
+    padding: 5px;
+}
+
+.mood-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin: 5px auto;
+}
+
+.mood-1 .mood-indicator { background-color: #ff4d4d; }
+.mood-2 .mood-indicator { background-color: #ffa64d; }
+.mood-3 .mood-indicator { background-color: #ffff4d; }
+.mood-4 .mood-indicator { background-color: #4dff4d; }
+.mood-5 .mood-indicator { background-color: #4d4dff; }
+
+.calendar-day {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.calendar-day:hover {
+    background-color: #f8f9fa;
+}
+/* simple emoji styling */
+.mood-emoji {
+    font-size: 1.25rem;
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previousMonth() {
+    // Implementation will be added
+    console.log('Previous month clicked');
+}
+
+function nextMonth() {
+    // Implementation will be added
+    console.log('Next month clicked');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.calendar-day').forEach(day => {
+        day.addEventListener('click', () => {
+            const date = day.dataset.date;
+            if (date) {
+                window.location.href = `/mood_entry/${date}`;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock content %}
