@@ -5,10 +5,19 @@
 {% block extra_head %}
 <style>
     @keyframes float {
-        0% { transform: translateY(0px) rotate(0deg); }
-        50% { transform: translateY(-10px) rotate(5deg); }
-        100% { transform: translateY(0px) rotate(0deg); }
+        0% {
+            transform: translateY(0px) rotate(0deg);
+        }
+
+        50% {
+            transform: translateY(-10px) rotate(5deg);
+        }
+
+        100% {
+            transform: translateY(0px) rotate(0deg);
+        }
     }
+
     .float-animation {
         animation: float 4s ease-in-out infinite;
     }
@@ -21,7 +30,7 @@
         <div class="p-3 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl text-white float-animation">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
         </div>
         <div>
@@ -44,67 +53,97 @@
 </div>
 
 
-    <!-- Right: Mood History -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-2">
-                <span class="text-xl">🌙</span>
-                <h3 class="text-lg font-semibold text-gray-900">Your Journey</h3>
-            </div>
-            {% if entries %}
-            <span class="text-sm text-gray-500">{{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}</span>
-            {% endif %}
+<!-- Right: Mood History -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2">
+            <span class="text-xl">🌙</span>
+            <h3 class="text-lg font-semibold text-gray-900">Your Journey</h3>
         </div>
-
         {% if entries %}
-            <div class="space-y-3 max-h-96 overflow-y-auto">
-                {% for entry in entries %}
-                <div class="group relative p-4 rounded-xl border-l-4 bg-gradient-to-r from-white to-gray-50 hover:shadow-md transition-all duration-200
-                    {% if entry.mood_rating >= 8 %}border-green-400 hover:from-green-50 hover:to-emerald-50
-                    {% elif entry.mood_rating >= 5 %}border-yellow-400 hover:from-yellow-50 hover:to-amber-50
-                    {% else %}border-red-400 hover:from-red-50 hover:to-pink-50{% endif %}">
-                    <div class="flex items-start justify-between mb-2">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl">
-                                {% if entry.mood_rating >= 8 %}😄
-                                {% elif entry.mood_rating >= 5 %}🙂
-                                {% else %}😢{% endif %}
-                            </span>
-                            <div>
-                                <span class="font-medium text-gray-900">{{ entry.mood_label }}</span>
-                                <span class="text-xs text-gray-500 ml-1">(Rating: {{ entry.mood_rating }}/10)</span>
-                                <p class="text-xs text-gray-500">{{ entry.entry_date.strftime('%A, %b %d') }}</p>
-                            </div>
-                        </div>
-                        <span class="text-xs text-gray-400">{{ entry.timestamp.strftime('%I:%M %p') }}</span>
-                    </div>
-
-                    {% if entry.notes %}
-                        <p class="text-sm text-gray-600 ml-11 italic">{{ entry.notes }}</p>
-                    {% else %}
-                        <p class="text-sm text-gray-400 ml-11 italic">Silent reflection</p>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="text-center py-12">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full mb-4">
-                    <span class="text-2xl">☁️</span>
-                </div>
-                <p class="text-gray-500 mb-2">No entries yet</p>
-                <p class="text-sm text-gray-400">
-                    Beginning emotional reflection is not a judgment, but a gentle greeting. 
-                    It is the quiet courage to sit with yourself and simply say, 
-                    "I am here, and I am ready to listen."
-                </p>
-            </div>
+        <span class="text-sm text-gray-500">{{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}</span>
         {% endif %}
     </div>
 
+    {% if entries %}
+    <div class="space-y-3 max-h-96 overflow-y-auto">
+        {% for entry in entries %}
+        <div class="group relative p-4 rounded-xl border-l-4 bg-gradient-to-r from-white to-gray-50 hover:shadow-md transition-all duration-200
+                {% if entry.mood_rating >= 8 %}border-green-400 hover:from-green-50 hover:to-emerald-50
+                {% elif entry.mood_rating >= 5 %}border-yellow-400 hover:from-yellow-50 hover:to-amber-50
+                {% else %}border-red-400 hover:from-red-50 hover:to-pink-50{% endif %}">
+            <div class="flex items-start justify-between mb-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">
+                        {% if entry.mood_rating >= 8 %}😄
+                        {% elif entry.mood_rating >= 5 %}🙂
+                        {% else %}😢{% endif %}
+                    </span>
+                    <div>
+                        <span class="font-medium text-gray-900">{{ entry.mood_label }}</span>
+                        <span class="text-xs text-gray-500 ml-1">(Rating: {{ entry.mood_rating }}/10)</span>
+                        <p class="text-xs text-gray-500">{{ entry.entry_date.strftime('%A, %b %d') }}</p>
+                    </div>
+                </div>
+                <!-- Dropdown menu with Edit and Delete -->
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400">{{ entry.timestamp.strftime('%I:%M %p') }}</span>
+
+                    <div class="relative inline-block text-left">
+                        <button type="button" class="text-gray-400 hover:text-gray-600 focus:outline-none"
+                            onclick="toggleDropdown('menu-{{ entry.id }}')">
+                            ⋯
+                        </button>
+
+                        <div id="menu-{{ entry.id }}"
+                            class="hidden absolute right-0 z-10 mt-2 w-32 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                            <div class="py-1">
+                                <form action="{{ url_for('edit_entry', entry_id=entry.id) }}" method="get">
+                                    <button type="submit"
+                                        class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50">
+                                        Edit
+                                    </button>
+                                </form>
+
+                                <form action="{{ url_for('delete_entry', entry_id=entry.id) }}" method="post"
+                                    onsubmit="return confirm('Delete this entry?');">
+                                    <button type="submit"
+                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End dropdown menu -->
 
 
+            </div>
 
+            {% if entry.notes %}
+            <p class="text-sm text-gray-600 ml-11 italic">{{ entry.notes }}</p>
+            {% else %}
+            <p class="text-sm text-gray-400 ml-11 italic">Silent reflection</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <div
+            class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full mb-4">
+            <span class="text-2xl">☁️</span>
+        </div>
+        <p class="text-gray-500 mb-2">No entries yet</p>
+        <p class="text-sm text-gray-400">
+            Beginning emotional reflection is not a judgment, but a gentle greeting.
+            It is the quiet courage to sit with yourself and simply say,
+            "I am here, and I am ready to listen."
+        </p>
+    </div>
+    {% endif %}
+</div>
 
 </div>
 
@@ -112,8 +151,28 @@
     <div class="max-w-3xl mx-auto text-center">
         <h3 class="text-2xl font-bold mb-2">Mindfulness Tip</h3>
         <p class="opacity-90">
-            Taking just 5 minutes each day to check in with your emotions can improve self-awareness and emotional regulation by up to 40%. Click on "Track Moods" on the home page to begin
+            Taking just 5 minutes each day to check in with your emotions can improve self-awareness and emotional
+            regulation by up to 40%. Click on "Track Moods" on the home page to begin
         </p>
     </div>
 </div>
+
+<!-- ✨ Dropdown menu script ✨ -->
+<script>
+    function toggleDropdown(id) {
+        document.querySelectorAll('[id^="menu-"]').forEach(el => {
+            if (el.id === id) {
+                el.classList.toggle('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        });
+    }
+    window.addEventListener('click', function (e) {
+        if (!e.target.closest('.relative')) {
+            document.querySelectorAll('[id^="menu-"]').forEach(el => el.classList.add('hidden'));
+        }
+    });
+</script>
+
 {% endblock %}
