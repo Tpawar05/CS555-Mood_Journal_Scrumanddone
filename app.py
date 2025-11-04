@@ -31,10 +31,9 @@ def login():
             return redirect(url_for('home'))
         else:
             flash('Invalid username or password', 'error')
-            return redirect(url_for('login'))  # 👈 redirect back to '/' route
+            return redirect(url_for('login'))
 
     return render_template('home/login.html')
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -75,7 +74,7 @@ def register():
 @app.route('/home')
 def home():
     if not session.get('logged_in'):
-        return redirect(url_for('login'))  # 👈 ensure redirects to '/'
+        return redirect(url_for('login'))  
     return render_template('home/index.html', page_id='home')
 
 @app.route('/logs')
