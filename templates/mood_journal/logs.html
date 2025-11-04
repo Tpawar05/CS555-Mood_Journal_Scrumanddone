@@ -43,68 +43,80 @@
     </div>
 </div>
 
-
-    <!-- Right: Mood History -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-2">
-                <span class="text-xl">🌙</span>
-                <h3 class="text-lg font-semibold text-gray-900">Your Journey</h3>
-            </div>
-            {% if entries %}
-            <span class="text-sm text-gray-500">{{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}</span>
-            {% endif %}
+<!-- Right: Mood History -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2">
+            <span class="text-xl">🌙</span>
+            <h3 class="text-lg font-semibold text-gray-900">Your Journey</h3>
         </div>
-
         {% if entries %}
-            <div class="space-y-3 max-h-96 overflow-y-auto">
-                {% for entry in entries %}
-                <div class="group relative p-4 rounded-xl border-l-4 bg-gradient-to-r from-white to-gray-50 hover:shadow-md transition-all duration-200
-                    {% if entry.mood_rating >= 8 %}border-green-400 hover:from-green-50 hover:to-emerald-50
-                    {% elif entry.mood_rating >= 5 %}border-yellow-400 hover:from-yellow-50 hover:to-amber-50
-                    {% else %}border-red-400 hover:from-red-50 hover:to-pink-50{% endif %}">
-                    <div class="flex items-start justify-between mb-2">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl">
-                                {% if entry.mood_rating >= 8 %}😄
-                                {% elif entry.mood_rating >= 5 %}🙂
-                                {% else %}😢{% endif %}
-                            </span>
-                            <div>
-                                <span class="font-medium text-gray-900">{{ entry.mood_label }}</span>
-                                <span class="text-xs text-gray-500 ml-1">(Rating: {{ entry.mood_rating }}/10)</span>
-                                <p class="text-xs text-gray-500">{{ entry.entry_date.strftime('%A, %b %d') }}</p>
-                            </div>
-                        </div>
-                        <span class="text-xs text-gray-400">{{ entry.timestamp.strftime('%I:%M %p') }}</span>
-                    </div>
-
-                    {% if entry.notes %}
-                        <p class="text-sm text-gray-600 ml-11 italic">{{ entry.notes }}</p>
-                    {% else %}
-                        <p class="text-sm text-gray-400 ml-11 italic">Silent reflection</p>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="text-center py-12">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full mb-4">
-                    <span class="text-2xl">☁️</span>
-                </div>
-                <p class="text-gray-500 mb-2">No entries yet</p>
-                <p class="text-sm text-gray-400">
-                    Beginning emotional reflection is not a judgment, but a gentle greeting. 
-                    It is the quiet courage to sit with yourself and simply say, 
-                    "I am here, and I am ready to listen."
-                </p>
-            </div>
+        <span class="text-sm text-gray-500">{{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}</span>
         {% endif %}
     </div>
 
+    {% if entries %}
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+            {% for entry in entries %}
+            <div class="group relative p-4 rounded-xl border-l-4 bg-gradient-to-r from-white to-gray-50 hover:shadow-md transition-all duration-200
+                {% if entry.mood_rating >= 8 %}border-green-400 hover:from-green-50 hover:to-emerald-50
+                {% elif entry.mood_rating >= 5 %}border-yellow-400 hover:from-yellow-50 hover:to-amber-50
+                {% else %}border-red-400 hover:from-red-50 hover:to-pink-50{% endif %}">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">
+                            {% if entry.mood_rating >= 8 %}😄
+                            {% elif entry.mood_rating >= 5 %}🙂
+                            {% else %}😢{% endif %}
+                        </span>
+                        <div>
+                            <span class="font-medium text-gray-900">{{ entry.mood_label }}</span>
+                            <span class="text-xs text-gray-500 ml-1">(Rating: {{ entry.mood_rating }}/10)</span>
+                            <!-- Updated date format -->
+                            <p class="text-xs text-gray-500">
+                                {{ entry.entry_date.strftime('%A, %b %d %Y') }}
+                            </p>
+                        </div>
+                    </div>
+                    <!-- Fallback timestamp -->
+                    <span class="text-xs text-gray-400">
+                        {% if entry.created_at %}
+                            {{ entry.created_at.strftime('%I:%M %p') }}
+                        {% else %}
+                            {{ entry.timestamp.strftime('%I:%M %p') }}
+                        {% endif %}
+                    </span>
+                </div>
 
+                {% if entry.notes %}
+                <p class="text-sm text-gray-600 ml-11 italic">{{ entry.notes }}</p>
+                {% else %}
+                <p class="text-sm text-gray-400 ml-11 italic">Silent reflection</p>
+                {% endif %}
 
-
+                <!--  Show timer only if > 0 -->
+                {% if entry.timer and entry.timer|int > 0 %}
+                <p class="text-xs text-gray-500 ml-11 mt-1">
+                    Reflected for {{ entry.timer }} minute{{ 's' if entry.timer|int != 1 else '' }}
+                </p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-12">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full mb-4">
+                <span class="text-2xl">☁️</span>
+            </div>
+            <p class="text-gray-500 mb-2">No entries yet</p>
+            <p class="text-sm text-gray-400">
+                Beginning emotional reflection is not a judgment, but a gentle greeting. 
+                It is the quiet courage to sit with yourself and simply say, 
+                "I am here, and I am ready to listen."
+            </p>
+        </div>
+    {% endif %}
+</div>
 
 </div>
 
@@ -112,7 +124,8 @@
     <div class="max-w-3xl mx-auto text-center">
         <h3 class="text-2xl font-bold mb-2">Mindfulness Tip</h3>
         <p class="opacity-90">
-            Taking just 5 minutes each day to check in with your emotions can improve self-awareness and emotional regulation by up to 40%. Click on "Track Moods" on the home page to begin
+            Taking just 5 minutes each day to check in with your emotions can improve self-awareness and emotional regulation by up to 40%. 
+            Click on "Track Moods" on the home page to begin
         </p>
     </div>
 </div>
