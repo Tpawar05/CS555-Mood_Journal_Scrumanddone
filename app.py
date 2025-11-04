@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from flask import Flask, render_template, request, redirect, url_for
 import os
 from extensions import db
 
@@ -15,7 +14,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-from models import MoodEntry  
+from models import MoodEntry, User  
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -23,21 +22,59 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Simple static credentials for testing
-        if username == 'username' and password == 'password':
+        # Check if user exists in database
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
             session['logged_in'] = True
+            session['user_id'] = user.id
             return redirect(url_for('home'))
         else:
             flash('Invalid username or password', 'error')
-            return redirect(url_for('login'))  # 👈 redirect back to '/' route
+            return redirect(url_for('login'))
 
     return render_template('home/login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        # Validate passwords match
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return redirect(url_for('register'))
+
+        # Check if username already exists
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists', 'error')
+            return redirect(url_for('register'))
+
+        # Check if email already exists
+        if User.query.filter_by(email=email).first():
+            flash('Email already exists', 'error')
+            return redirect(url_for('register'))
+
+        # Create new user
+        new_user = User(username=username, email=email)
+        new_user.set_password(password)
+        
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash('Account created successfully! Please log in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('home/register.html')
 
 
 @app.route('/home')
 def home():
     if not session.get('logged_in'):
-        return redirect(url_for('login'))  # 👈 ensure redirects to '/'
+        return redirect(url_for('login'))  
     return render_template('home/index.html', page_id='home')
 
 @app.route('/logs')
