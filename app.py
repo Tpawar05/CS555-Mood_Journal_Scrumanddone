@@ -16,6 +16,7 @@ db.init_app(app)
 
 from models import MoodEntry  
 
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -39,10 +40,48 @@ def home():
         return redirect(url_for('login'))  # ensure redirects to '/'
     return render_template('home/index.html', page_id='home')
 
+
 @app.route('/logs')
 def logs():
     entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
     return render_template('mood_journal/logs.html', entries=entries, page_id='home')
+
+
+# DELETE ENTRY ROUTE
+@app.route('/delete/<int:entry_id>', methods=['POST'])
+def delete_entry(entry_id):
+    entry = MoodEntry.query.get_or_404(entry_id)
+    db.session.delete(entry)
+    db.session.commit()
+    flash('Entry deleted successfully!')
+    return redirect(url_for('logs'))
+
+
+# EDIT ENTRY ROUTE
+@app.route('/edit/<int:entry_id>', methods=['GET', 'POST'])
+def edit_entry(entry_id):
+    entry = MoodEntry.query.get_or_404(entry_id)
+
+    if request.method == 'POST':
+        from datetime import datetime
+
+        # Update editable fields
+        entry.mood_label = request.form.get('mood_label')
+        
+        date_str = request.form.get('entry_date')
+        if date_str:
+            entry.entry_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        
+        entry.mood_rating = int(request.form.get('mood_rating', 5))
+        entry.notes = request.form.get('notes')
+
+        db.session.commit()
+        flash('Entry updated successfully!')
+        return redirect(url_for('logs'))
+
+    return render_template('mood_journal/edit.html', entry=entry)
+
+
 
 @app.route('/logout')
 def logout():
@@ -100,12 +139,46 @@ def mood_journal():
     from datetime import datetime as _dt
     return render_template("mood_journal/index.html", entries=entries, current_date=_dt.utcnow().date().isoformat())
 
+def seed_test_entries():
+    """
+    Seed the database with sample mood entries for testing.
+    Automatically skipped if entries already exist.
+    """
+
+    from datetime import datetime, timedelta
+    from models import MoodEntry
+
+    if MoodEntry.query.count() == 0:
+        print(" Implementing test mood entries...")
+
+        today = datetime.utcnow().date()
+
+        sample_entries = [
+            MoodEntry(user_id=1, entry_date=today, mood_rating=8, mood_label="Happy", notes="Had a great day with friends!"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=1), mood_rating=4, mood_label="Tired", notes="Stayed up late finishing hw"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=2), mood_rating=6, mood_label="Chill", notes="Walked and coffee shop visit"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=3), mood_rating=2, mood_label="Overwhelmed", notes="Too many assignments this week"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=5), mood_rating=9, mood_label="Excited", notes="Day was great today!!"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=7), mood_rating=3, mood_label="Unmotivated", notes="Felt sluggish all day"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=10), mood_rating=7, mood_label="Productive", notes="Finally cleaned the apartment"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=12), mood_rating=5, mood_label="Neutral", notes="Average day, just went with the flow"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=14), mood_rating=10, mood_label="Euphoric", notes="Got good news!"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=20), mood_rating=1, mood_label="Exhausted", notes="Midterm season😵‍💫"),
+        ]
+
+        db.session.add_all(sample_entries)
+        db.session.commit()
+        print("Seeded 10 test mood entries for dashboards/calendars/tests.")
+    else:
+        print("The entries already exist — skipping seed.")
+
 
 def init_db():
     with app.app_context():
         db.create_all()
 
+
 if __name__ == '__main__':
-    if not os.path.exists('app.db'):
+    with app.app_context():
         init_db()
     app.run(debug=True)
