@@ -29,7 +29,7 @@ def login():
             return redirect(url_for('home'))
         else:
             flash('Invalid username or password', 'error')
-            return redirect(url_for('login')) 
+            return redirect(url_for('login'))  # redirect back to '/' route
 
     return render_template('home/login.html')
 
@@ -37,7 +37,7 @@ def login():
 @app.route('/home')
 def home():
     if not session.get('logged_in'):
-        return redirect(url_for('login')) 
+        return redirect(url_for('login'))  # ensure redirects to '/'
     return render_template('home/index.html', page_id='home')
 
 
@@ -94,18 +94,19 @@ def mood_journal():
     from datetime import datetime
 
     if request.method == "POST":
-        # Grab form data
-        title = request.form.get("title")  # from the HTML form
-        date_str = request.form.get("date")
+        #  Updated field names to match your HTML
+        label = request.form.get("mood_label")  
+        date_str = request.form.get("entry_date")  
         rating = int(request.form.get("mood_rating", 5))
         notes = request.form.get("notes")
+        timer = request.form.get("timer")
 
-        # Convert date string to Python date
+        # Properly convert date from picker
         entry_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.utcnow().date()
 
-        # If title provided, use it as label; else derive label from rating
-        if title:
-            mood = title.strip()
+        # Use label if present, else derive from rating
+        if label and label.strip():
+            mood = label.strip()
         elif rating <= 2:
             mood = "Terrible"
         elif rating <= 4:
@@ -125,7 +126,8 @@ def mood_journal():
             entry_date=entry_date,
             mood_rating=rating,
             mood_label=mood,
-            notes=notes
+            notes=notes,
+            timer=timer
         )
 
         db.session.add(new_entry)
@@ -134,7 +136,8 @@ def mood_journal():
 
     # Display entries
     entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
-    return render_template("mood_journal/index.html", entries=entries)
+    from datetime import datetime as _dt
+    return render_template("mood_journal/index.html", entries=entries, current_date=_dt.utcnow().date().isoformat())
 
 def seed_test_entries():
     """
@@ -178,5 +181,4 @@ def init_db():
 if __name__ == '__main__':
     with app.app_context():
         init_db()
-        seed_test_entries() #creates entries if none exist 
     app.run(debug=True)
