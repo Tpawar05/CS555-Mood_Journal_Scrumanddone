@@ -94,6 +94,13 @@ def mood_journal():
     from datetime import datetime
 
     if request.method == "POST":
+        # Calculate time spent
+        start_time = session.get('entry_start_time')
+        time_spent = 0
+        if start_time:
+            time_spent = int((datetime.utcnow() - datetime.fromisoformat(start_time)).total_seconds())
+            session.pop('entry_start_time', None)  # Clear the start time
+
         # Grab form data
         title = request.form.get("title")  # from the HTML form
         date_str = request.form.get("date")
@@ -125,13 +132,17 @@ def mood_journal():
             entry_date=entry_date,
             mood_rating=rating,
             mood_label=mood,
-            notes=notes
+            notes=notes,
+            time_spent_seconds=time_spent
         )
 
         db.session.add(new_entry)
         db.session.commit()
         return redirect("/mood-journal")
 
+    # Set start time when loading the page
+    session['entry_start_time'] = datetime.utcnow().isoformat()
+    
     # Display entries
     entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
     return render_template("mood_journal/index.html", entries=entries)
