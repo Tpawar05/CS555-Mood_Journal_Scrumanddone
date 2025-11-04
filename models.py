@@ -26,6 +26,5 @@ class MoodEntry(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     viewed_at = db.Column(db.DateTime)
-    tags = db.Column(db.Text)
-    timer = db.Column(db.Integer, nullable=True) #timer entry
+    tags = db.Column(db.Text)  
     timestamp = db.Column(db.DateTime, default=db.func.now())
