@@ -102,7 +102,7 @@ def mood_journal():
             session.pop('entry_start_time', None)  # Clear the start time
 
         # Grab form data
-        title = request.form.get("title")  # from the HTML form
+        mood_label= request.form.get("mood_label")  # from the HTML form
         date_str = request.form.get("date")
         rating = int(request.form.get("mood_rating", 5))
         notes = request.form.get("notes")
@@ -111,8 +111,8 @@ def mood_journal():
         entry_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.utcnow().date()
 
         # If title provided, use it as label; else derive label from rating
-        if title:
-            mood = title.strip()
+        if mood_label and mood_label.strip():
+            mood = mood_label.strip()
         elif rating <= 2:
             mood = "Terrible"
         elif rating <= 4:
