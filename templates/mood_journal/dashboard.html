@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+  <div class="p-4">
+    <h1 class="text-2xl font-bold mb-4">Mood Dashboard - {{ current_month }}</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="p-4 bg-white rounded shadow">
+        <div class="text-sm text-gray-500">Average Mood</div>
+        <div class="text-3xl font-semibold">{{ average_mood|round(1) }}</div>
+        <div class="mt-2 text-2xl">
+          {% set avg_bucket = (average_mood|round(0))|int %}
+          {% if avg_bucket <= 1 %}😭{% elif avg_bucket == 2 %}☹️{% elif avg_bucket == 3 %}😐{% elif avg_bucket == 4 %}🙂{% else %}😄{% endif %}
+        </div>
+      </div>
+      <div class="p-4 bg-white rounded shadow">
+        <div class="text-sm text-gray-500">Total Entries</div>
+        <div class="text-3xl font-semibold">{{ total_entries }}</div>
+      </div>
+      <div class="p-4 bg-white rounded shadow">
+        <div class="text-sm text-gray-500">Mood Distribution</div>
+        <canvas id="moodDistChart" height="80"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded shadow p-4 mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Monthly Calendar</h2>
+        <div>
+          <a href="?year={{ (request.args.get('year') or '') }}&month={{ ((request.args.get('month') or '')|int - 1) }}" class="px-2">◀</a>
+          <a href="?year={{ (request.args.get('year') or '') }}&month={{ ((request.args.get('month') or '')|int + 1) }}" class="px-2">▶</a>
+        </div>
+      </div>
+
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="text-sm text-gray-600">
+            <th class="p-2">Sun</th>
+            <th class="p-2">Mon</th>
+            <th class="p-2">Tue</th>
+            <th class="p-2">Wed</th>
+            <th class="p-2">Thu</th>
+            <th class="p-2">Fri</th>
+            <th class="p-2">Sat</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for week in calendar_dates %}
+          <tr>
+            {% for day, mood in week %}
+              {% if day %}
+                <td class="align-top border p-2 h-28 relative" data-date="{{ day.isoformat() }}">
+                  <div class="text-xs text-gray-500">{{ day.day }}</div>
+                  {% if mood %}
+                    <div class="absolute bottom-2 right-2 text-xl" title="Mood {{ mood }}">
+                      {% if mood <= 2 %}😭{% elif mood <= 4 %}☹️{% elif mood <= 6 %}😐{% elif mood <= 8 %}🙂{% else %}😄{% endif %}
+                    </div>
+                  {% endif %}
+                </td>
+              {% else %}
+                <td class="border p-2 h-28 bg-gray-50"></td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="p-4 bg-white rounded shadow">
+        <h3 class="font-semibold mb-2">Weekly Trend (Mon→Sun)</h3>
+        <canvas id="weeklyTrendChart" height="100"></canvas>
+      </div>
+      <div class="p-4 bg-white rounded shadow">
+        <h3 class="font-semibold mb-2">Last 7 Days</h3>
+        <canvas id="last7Chart" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const moodDist = {{ mood_distribution | tojson }} || [0,0,0,0,0];
+  const weekly = {{ weekly_trend | tojson }} || [null,null,null,null,null,null,null];
+  const last7 = {{ last7_trend | tojson }} || [null,null,null,null,null,null,null];
+
+  // Mood distribution doughnut (1..5 buckets)
+  new Chart(document.getElementById('moodDistChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Terrible','Bad','Neutral','Good','Excellent'],
+      datasets: [{ data: moodDist, backgroundColor: ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6'] }]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+
+  // Weekly trend line
+  new Chart(document.getElementById('weeklyTrendChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{ data: weekly, borderColor: '#8b5cf6', tension: 0.4, spanGaps: true }] },
+    options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { display: false } } }
+  });
+
+  // Last 7 days
+  new Chart(document.getElementById('last7Chart').getContext('2d'), {
+    type: 'line',
+    data: { labels: ['-6','-5','-4','-3','-2','-1','0'], datasets: [{ data: last7, borderColor: '#3b82f6', tension: 0.35, spanGaps: true }] },
+    options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { display: false } } }
+  });
+})();
+</script>
+
+{% endblock %}

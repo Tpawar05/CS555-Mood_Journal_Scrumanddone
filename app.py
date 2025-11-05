@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import os
 from extensions import db
+from datetime import datetime, date, timedelta
+import calendar
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
@@ -125,6 +127,97 @@ def edit_entry(entry_id):
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+
+@app.route('/dashboard')
+def dashboard():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    # allow optional month/year via query params
+    today = datetime.now()
+    try:
+        year = int(request.args.get('year', today.year))
+        month = int(request.args.get('month', today.month))
+    except (TypeError, ValueError):
+        year = today.year
+        month = today.month
+
+    # calendar matrix for the requested month
+    cal = calendar.monthcalendar(year, month)
+    calendar_dates = []
+
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1)
+    else:
+        end_date = date(year, month + 1, 1)
+
+    entries = MoodEntry.query.filter(
+        MoodEntry.entry_date >= start_date,
+        MoodEntry.entry_date < end_date
+    ).order_by(MoodEntry.entry_date).all()
+
+    mood_lookup = {entry.entry_date: entry.mood_rating for entry in entries}
+
+    for week in cal:
+        row = []
+        for d in week:
+            if d == 0:
+                row.append((None, None))
+            else:
+                cell_date = date(year, month, d)
+                row.append((cell_date, mood_lookup.get(cell_date)))
+        calendar_dates.append(row)
+
+    total_entries = len(entries)
+    average_mood = sum(e.mood_rating for e in entries) / total_entries if total_entries > 0 else 0
+
+    # bucket function: map raw rating (1-10) to 1-5
+    def bucket(r):
+        if r <= 2:
+            return 1
+        if r <= 4:
+            return 2
+        if r <= 6:
+            return 3
+        if r <= 8:
+            return 4
+        return 5
+
+    mood_distribution = [0] * 5
+    for e in entries:
+        mood_distribution[bucket(e.mood_rating) - 1] += 1
+
+    # weekly trend for current week (Mon..Sun)
+    week_start = (today - timedelta(days=today.weekday())).date()
+    week_entries = MoodEntry.query.filter(
+        MoodEntry.entry_date >= week_start,
+        MoodEntry.entry_date < week_start + timedelta(days=7)
+    ).all()
+    week_sums = [0] * 7
+    week_counts = [0] * 7
+    for e in week_entries:
+        idx = e.entry_date.weekday()
+        week_sums[idx] += e.mood_rating
+        week_counts[idx] += 1
+    weekly_trend = [round(week_sums[i] / week_counts[i], 1) if week_counts[i] else None for i in range(7)]
+
+    # last 7 days trend
+    last7 = []
+    for delta in range(6, -1, -1):
+        d = (today - timedelta(days=delta)).date()
+        day_vals = [e.mood_rating for e in entries if e.entry_date == d]
+        last7.append(round(sum(day_vals) / len(day_vals), 1) if day_vals else None)
+
+    return render_template('mood_journal/dashboard.html',
+                           calendar_dates=calendar_dates,
+                           current_month=date(year, month, 1).strftime('%B %Y'),
+                           average_mood=average_mood,
+                           total_entries=total_entries,
+                           mood_distribution=mood_distribution,
+                           weekly_trend=weekly_trend,
+                           last7_trend=last7)
 
 
 @app.route("/mood-journal", methods=["GET", "POST"])
