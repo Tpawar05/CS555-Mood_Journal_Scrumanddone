@@ -210,3 +210,4 @@ __marimo__/
 CLAUDE.md
 .claude/
 .DS_Store
+app_backup.py
