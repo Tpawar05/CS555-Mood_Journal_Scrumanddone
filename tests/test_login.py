@@ -1,13 +1,27 @@
 import pytest
 from app import app
+from extensions import db
+from models import User
+
 
 @pytest.fixture
-def client():
+def client(app):
     """Set up a Flask test client for the app"""
-    app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
     with app.test_client() as client:
         yield client
+
+
+@pytest.fixture
+def test_user(app):
+    """Create a test user in the database"""
+    with app.app_context():
+        user = User(username="username", email="test@example.com")
+        user.set_password("password")
+        db.session.add(user)
+        db.session.commit()
+        yield user
+        db.session.delete(user)
+        db.session.commit()
 
 
 def test_login_invalid_credentials(client):
@@ -17,7 +31,7 @@ def test_login_invalid_credentials(client):
     assert b"Invalid username or password" in response.data
 
 
-def test_login_valid_credentials(client):
+def test_login_valid_credentials(client, test_user):
     """Valid login should redirect to /home"""
     response = client.post("/", data={"username": "username", "password": "password"})
     assert response.status_code == 302  # redirect
@@ -31,7 +45,7 @@ def test_home_requires_login(client):
     assert response.location.endswith("/")  # redirected to login page
 
 
-def test_login_and_access_home(client):
+def test_login_and_access_home(client, test_user):
     """After successful login, user can access home page"""
     client.post("/", data={"username": "username", "password": "password"})
     response = client.get("/home")
@@ -39,7 +53,7 @@ def test_login_and_access_home(client):
     assert b"Mood Journal" in response.data
 
 
-def test_logout_clears_session(client):
+def test_logout_clears_session(client, test_user):
     """Logging out should redirect to login and restrict future access"""
     # Login first
     client.post("/", data={"username": "username", "password": "password"})

@@ -39,8 +39,7 @@ def clear_db(app):
     """Clear all data between tests to ensure isolation."""
     yield
     with app.app_context():
-        # Import here to avoid early database access
-        from models import MoodEntry
-        # Clean up all tables after each test
+        from models import MoodEntry, User
         db.session.query(MoodEntry).delete()
+        db.session.query(User).delete()
         db.session.commit()

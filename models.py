@@ -1,5 +1,6 @@
 from extensions import db
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # --- USERS TABLE ---
 class User(db.Model):
@@ -12,6 +13,12 @@ class User(db.Model):
 
     # Relationships
     mood_entries = db.relationship('MoodEntry', backref='user', lazy=True)
+    
+    def set_password(self, password):
+        self.password = generate_password_hash(password)
+    
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
 
 
 # --- MOOD ENTRIES TABLE ---
