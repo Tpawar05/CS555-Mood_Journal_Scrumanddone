@@ -130,24 +130,27 @@ def logout():
 @app.route("/mood-journal", methods=["GET", "POST"])
 def mood_journal():
     from datetime import datetime
+    from zoneinfo import ZoneInfo
+    eastern = ZoneInfo("America/New_York")
 
     if request.method == "POST":
         # Calculate time spent
         start_time = session.get('entry_start_time')
         time_spent = 0
         if start_time:
-            time_spent = int((datetime.utcnow() - datetime.fromisoformat(start_time)).total_seconds())
+            time_spent = int((datetime.now(eastern) - datetime.fromisoformat(start_time)).total_seconds())
             session.pop('entry_start_time', None)  # Clear the start time
-
+        
+        
         # Grab form data
         mood_label= request.form.get("mood_label")  # from the HTML form
-        date_str = request.form.get("date")
+        date_str = request.form.get("entry_date")
         rating = int(request.form.get("mood_rating", 5))
         notes = request.form.get("notes")
 
-        # Convert date string to Python date
-        entry_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.utcnow().date()
-
+         # Convert date string to Python date using local time fallback
+        entry_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.now(eastern).date()
+        
         # If title provided, use it as label; else derive label from rating
         if mood_label and mood_label.strip():
             mood = mood_label.strip()
@@ -179,7 +182,7 @@ def mood_journal():
         return redirect("/mood-journal")
 
     # Set start time when loading the page
-    session['entry_start_time'] = datetime.utcnow().isoformat()
+    session['entry_start_time'] = datetime.now(eastern).isoformat()
     
     # Display entries
     entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
