@@ -1,8 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import os
 from extensions import db
-from datetime import datetime, date, timedelta
-import calendar
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
@@ -127,59 +125,6 @@ def edit_entry(entry_id):
 def logout():
     session.clear()
     return redirect(url_for('login'))
-
-@app.route('/dashboard')
-def dashboard():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-
-    # Get current month and year
-    today = datetime.now()
-    year = today.year
-    month = today.month
-    
-    # Calculate calendar dates
-    cal = calendar.monthcalendar(year, month)
-    calendar_dates = []
-    
-    # Get all mood entries for the current month (use date objects to match model column type)
-    start_date = date(year, month, 1)
-    if month == 12:
-        end_date = date(year + 1, 1, 1)
-    else:
-        # first day of next month
-        end_date = date(year, month + 1, 1)
-
-    entries = MoodEntry.query.filter(
-        MoodEntry.entry_date >= start_date,
-        MoodEntry.entry_date < end_date
-    ).all()
-
-    # Create mood entry lookup (models.MoodEntry.entry_date is a Date)
-    mood_lookup = {entry.entry_date: entry.mood_rating for entry in entries}
-    
-    # Format calendar data
-    for week in cal:
-        calendar_week = []
-        for day in week:
-            if day == 0:
-                calendar_week.append((None, None))
-            else:
-                # avoid shadowing the imported `date` class by using `cell_date`
-                cell_date = date(year, month, day)
-                mood = mood_lookup.get(cell_date)
-                calendar_week.append((cell_date, mood))
-        calendar_dates.append(calendar_week)
-    
-    # Calculate statistics
-    total_entries = len(entries)
-    average_mood = sum(entry.mood_rating for entry in entries) / total_entries if total_entries > 0 else 0
-    
-    return render_template('mood_journal/dashboard.html',
-                         calendar_dates=calendar_dates,
-                         current_month=today.strftime('%B %Y'),
-                         average_mood=average_mood,
-                         total_entries=total_entries)
 
 
 @app.route("/mood-journal", methods=["GET", "POST"])
