@@ -245,7 +245,6 @@
             });
         })();
     </script>
-
     <!-- html -->
     <script>
         if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
@@ -301,13 +300,6 @@
                     }
                 }
 
-                // Debug: log raw event and transcripts
-                console.log('SpeechRecognition: result event', {
-                    resultIndex: ev.resultIndex,
-                    results: ev.results,
-                    interim: interimBuffer,
-                    final: finalTranscript
-                });
 
                 // Remove previously added interim from textarea if present
                 if (lastInterim && notes.value.endsWith(lastInterim)) {
@@ -319,7 +311,6 @@
                 if (finalTranscript) {
                     const cur = notes.value;
                     notes.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + finalTranscript;
-                    console.log('SpeechRecognition: final appended ->', finalTranscript);
                 }
 
                 // Append current interim as temporary text and remember it
@@ -327,7 +318,7 @@
                     const cur = notes.value;
                     notes.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + interimBuffer;
                     lastInterim = interimBuffer;
-                    console.log('SpeechRecognition: interim ->', interimBuffer);
+
                 } else {
                     lastInterim = '';
                 }
@@ -346,7 +337,6 @@
             });
 
             recognition.addEventListener('end', () => {
-                console.log('SpeechRecognition: ended');
                 if (isListening) {
                     // some browsers stop automatically; restart if still intended
                     try { recognition.start(); } catch (e) { isListening = false; updateButton(); }
@@ -376,7 +366,6 @@
                 } else {
                     isListening = false;
                     recognition.stop();
-                    console.log('Voice button: stop requested');
                 }
                 updateButton();
             });
@@ -386,7 +375,6 @@
                 if (isListening) {
                     isListening = false;
                     recognition.stop();
-                    console.log('Form submit: stopping recognition');
                     updateButton();
                 }
             });
@@ -402,6 +390,9 @@
             updateButton();
         })();
     </script>
+
+
+
 
 
 
