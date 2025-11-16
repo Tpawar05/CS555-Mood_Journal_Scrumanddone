@@ -1,8 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
 import os
+import csv
+import io
 from extensions import db
 from datetime import datetime, date, timedelta
 import calendar
+
+
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
@@ -120,6 +125,120 @@ def edit_entry(entry_id):
         return redirect(url_for('logs'))
 
     return render_template('mood_journal/edit.html', entry=entry)
+
+# Exporting single entry to CSV
+
+@app.route('/export/<int:entry_id>')
+def export_single_entry(entry_id):
+    entry = MoodEntry.query.get_or_404(entry_id)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow([
+        "Entry ID", "Date", "Mood Label", "Rating", 
+        "Notes", "Time Spent (sec)", "Created At"
+    ])
+
+    # Single row
+    writer.writerow([
+        entry.id,
+        entry.entry_date.strftime("%Y-%m-%d"),
+        entry.mood_label,
+        entry.mood_rating,
+        entry.notes or "",
+        entry.time_spent_seconds or 0,
+        entry.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    ])
+
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = f"attachment; filename=entry_{entry.id}.csv"
+    response.headers["Content-type"] = "text/csv"
+    return response
+
+# Exporting all entries to CSV
+@app.route('/export-all')
+def export_all_entries():
+    entries = MoodEntry.query.order_by(MoodEntry.entry_date.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "Entry ID", "Date", "Mood Label", "Rating", 
+        "Notes", "Time Spent (sec)", "Created At"
+    ])
+
+    for entry in entries:
+        writer.writerow([
+            entry.id,
+            entry.entry_date.strftime("%Y-%m-%d"),
+            entry.mood_label,
+            entry.mood_rating,
+            entry.notes or "",
+            entry.time_spent_seconds or 0,
+            entry.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        ])
+
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=all_entries.csv"
+    response.headers["Content-type"] = "text/csv"
+    return response
+
+
+
+#Export entries given a date range
+@app.route('/export-range')
+def export_range():
+    start = request.args.get('start_date')
+    end = request.args.get('end_date')
+
+    # Validate: must have both dates
+    if not start or not end:
+        flash("Please choose both start and end dates.", "error")
+        return redirect(url_for('logs'))
+
+    #Convert date strings
+    try:
+        start_date = datetime.strptime(start, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end, "%Y-%m-%d").date()
+    except ValueError:
+        flash("Invalid date format.", "error")
+        return redirect(url_for('logs'))
+
+    # Query entries in range
+    entries = MoodEntry.query.filter(
+        MoodEntry.entry_date >= start_date,
+        MoodEntry.entry_date <= end_date
+    ).order_by(MoodEntry.entry_date.asc()).all()
+
+    # Prepare CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "Entry ID", "Date", "Mood Label", "Rating",
+        "Notes", "Time Spent (sec)", "Created At"
+    ])
+
+    for entry in entries:
+        writer.writerow([
+            entry.id,
+            entry.entry_date.strftime("%Y-%m-%d"),
+            entry.mood_label,
+            entry.mood_rating,
+            entry.notes or "",
+            entry.time_spent_seconds or 0,
+            entry.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        ])
+
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = f"attachment; filename=entries_{start}_to_{end}.csv"
+    response.headers["Content-type"] = "text/csv"
+    return response
+
+
 
 
 
