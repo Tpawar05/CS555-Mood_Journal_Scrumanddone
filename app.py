@@ -339,6 +339,116 @@ def dashboard():
                            last7_trend=last7)
 
 
+@app.route('/account', methods=['GET', 'POST'])
+def account():
+    # Account settings: change password, delete account
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        # Change password
+        if action == 'change_password':
+            current = request.form.get('current_password')
+            new = request.form.get('new_password')
+            confirm = request.form.get('confirm_password')
+
+            if not user.check_password(current):
+                flash('Current password is incorrect', 'error')
+                return redirect(url_for('account'))
+
+            if not new or new != confirm:
+                flash('New passwords do not match or are empty', 'error')
+                return redirect(url_for('account'))
+
+            user.set_password(new)
+            db.session.commit()
+            flash('Password updated successfully', 'success')
+            return redirect(url_for('account'))
+
+        # Delete account
+        if action == 'delete_account':
+            # Remove user entries first to satisfy FK constraints
+            MoodEntry.query.filter_by(user_id=user.id).delete()
+            db.session.delete(user)
+            db.session.commit()
+            session.clear()
+            flash('Account deleted successfully', 'success')
+            return redirect(url_for('login'))
+
+    return render_template('mood_journal/account.html', user=user)
+
+
+@app.route('/check-password', methods=['POST'])
+def check_password():
+    """Endpoint to validate current password in real-time"""
+    if not session.get('logged_in'):
+        return {'correct': False}
+    
+    user = User.query.get(session.get('user_id'))
+    if not user:
+        return {'correct': False}
+    
+    data = request.get_json()
+    password = data.get('password', '')
+    
+    correct = user.check_password(password)
+    return {'correct': correct}
+
+
+@app.route('/weekly-summaries')
+def weekly_summaries():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    # Compute weekly aggregates for the logged-in user
+    user_id = session.get('user_id')
+    from collections import defaultdict
+
+    # Get all entries for the user ordered by date
+    entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.entry_date).all()
+
+    # Group entries by week start (Monday)
+    weeks = defaultdict(list)
+    for e in entries:
+        d = e.entry_date
+        # ensure d is a date object
+        if not isinstance(d, (date,)):
+            d = d.date()
+        week_start = d - timedelta(days=d.weekday())
+        weeks[week_start].append(e)
+
+    # Build summary list sorted by descending week_start (most recent first)
+    summaries = []
+    for week_start in sorted(weeks.keys(), reverse=True):
+        week_entries = weeks[week_start]
+        total = len(week_entries)
+        avg = round(sum(e.mood_rating for e in week_entries) / total, 1) if total else None
+
+        # find highest and lowest mood entries (sample notable entries)
+        highest = max(week_entries, key=lambda x: x.mood_rating) if total else None
+        lowest = min(week_entries, key=lambda x: x.mood_rating) if total else None
+
+        summaries.append({
+            'week_start': week_start,
+            'week_end': week_start + timedelta(days=6),
+            'total': total,
+            'average': avg,
+            'highest': highest,
+            'lowest': lowest,
+            'entries': week_entries,
+        })
+
+    # If no entries, still show empty list
+    return render_template('mood_journal/weekly_summaries.html', summaries=summaries)
+
+
 @app.route("/mood-journal", methods=["GET", "POST"])
 def mood_journal():
     from datetime import datetime
