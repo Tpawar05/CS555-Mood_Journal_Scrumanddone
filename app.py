@@ -28,12 +28,17 @@ def login():
         # Check if user exists in database
         user = User.query.filter_by(username=username).first()
         
-        if user and user.check_password(password):
+        if user and user.check_password(password) :
+            session['logged_in'] = True
+            session['user_id'] = user.id
+            return redirect(url_for('home'))
+
+        elif user and str(user.pin) == password:
             session['logged_in'] = True
             session['user_id'] = user.id
             return redirect(url_for('home'))
         else:
-            flash('Invalid username or password', 'error')
+            flash("Password/PIN does not match", 'error')
             return redirect(url_for('login'))
 
     return render_template('home/login.html')
@@ -45,7 +50,7 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
-
+        pin = request.form.get('PIN')
         # Validate passwords match
         if password != confirm_password:
             flash('Passwords do not match', 'error')
@@ -62,7 +67,7 @@ def register():
             return redirect(url_for('register'))
 
         # Create new user
-        new_user = User(username=username, email=email)
+        new_user = User(username=username, email=email, pin=pin)
         new_user.set_password(password)
         
         db.session.add(new_user)
