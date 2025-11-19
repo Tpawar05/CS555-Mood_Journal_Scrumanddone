@@ -24,6 +24,65 @@ db.init_app(app)
 from models import MoodEntry, User  
 
 
+def _to_date(val):
+    """Normalize an entry_date-like value to a datetime.date or return None.
+
+    Handles: date, datetime, ISO date/time strings, YYYYMMDD ints/strings, and unix timestamps.
+    """
+    if isinstance(val, date):
+        return val
+    if isinstance(val, datetime):
+        return val.date()
+    if isinstance(val, str):
+        s = val.strip()
+        # Try ISO date first
+        try:
+            return date.fromisoformat(s)
+        except Exception:
+            pass
+        # Try ISO datetime
+        try:
+            return datetime.fromisoformat(s).date()
+        except Exception:
+            pass
+        # Try YYYYMMDD
+        if s.isdigit():
+            if len(s) == 8:
+                try:
+                    return date(int(s[:4]), int(s[4:6]), int(s[6:8]))
+                except Exception:
+                    pass
+            # Try unix timestamp
+            try:
+                return datetime.fromtimestamp(int(s)).date()
+            except Exception:
+                pass
+        return None
+    if isinstance(val, int):
+        s = str(val)
+        if len(s) == 8:
+            try:
+                return date(int(s[:4]), int(s[4:6]), int(s[6:8]))
+            except Exception:
+                pass
+        try:
+            return datetime.fromtimestamp(val).date()
+        except Exception:
+            return None
+    return None
+
+
+def _normalize_entries(entries):
+    """Mutate a list of MoodEntry objects so their `entry_date` attributes are date objects when possible."""
+    if not entries:
+        return
+    for e in entries:
+        ed = _to_date(e.entry_date)
+        if ed is not None:
+            # assign back for template rendering (no commit)
+            e.entry_date = ed
+
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -43,7 +102,8 @@ def login():
             session['user_id'] = user.id
             return redirect(url_for('home'))
         else:
-            flash("Password/PIN does not match", 'error')
+            # Match test expectations: show a generic invalid credential message
+            flash("Invalid username or password", 'error')
             return redirect(url_for('login'))
 
     return render_template('home/login.html')
@@ -108,7 +168,8 @@ def profile():
     # Get user statistics
     total_entries = MoodEntry.query.filter_by(user_id=user_id).count()
     recent_entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).limit(5).all()
-    
+    # Normalize recent entry dates for template rendering
+    _normalize_entries(recent_entries)
     return render_template('home/profile.html', user=user, total_entries=total_entries, recent_entries=recent_entries)
 
 
@@ -121,9 +182,10 @@ def logs():
     user_id = session.get('user_id')
     if user_id:
         entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).all()
+        _normalize_entries(entries)
     else:
         entries = []
-    
+
     return render_template('mood_journal/logs.html', entries=entries, page_id='home')
 
 
@@ -196,9 +258,11 @@ def export_single_entry(entry_id):
     ])
 
     # Single row
+    ed = _to_date(entry.entry_date) or entry.entry_date
+    ed_str = ed.strftime("%Y-%m-%d") if hasattr(ed, 'strftime') else str(ed)
     writer.writerow([
         entry.id,
-        entry.entry_date.strftime("%Y-%m-%d"),
+        ed_str,
         entry.mood_label,
         entry.mood_rating,
         entry.notes or "",
@@ -227,7 +291,7 @@ def export_all_entries():
     for entry in entries:
         writer.writerow([
             entry.id,
-            entry.entry_date.strftime("%Y-%m-%d"),
+            (_to_date(entry.entry_date) or entry.entry_date).strftime("%Y-%m-%d") if (_to_date(entry.entry_date) or entry.entry_date) else "",
             entry.mood_label,
             entry.mood_rating,
             entry.notes or "",
@@ -277,9 +341,11 @@ def export_range():
     ])
 
     for entry in entries:
+        ed = _to_date(entry.entry_date) or entry.entry_date
+        ed_str = ed.strftime("%Y-%m-%d") if hasattr(ed, 'strftime') else str(ed)
         writer.writerow([
             entry.id,
-            entry.entry_date.strftime("%Y-%m-%d"),
+            ed_str,
             entry.mood_label,
             entry.mood_rating,
             entry.notes or "",
@@ -337,7 +403,11 @@ def dashboard():
         MoodEntry.entry_date < end_date
     ).order_by(MoodEntry.entry_date).all()
 
-    mood_lookup = {entry.entry_date: entry.mood_rating for entry in entries}
+    mood_lookup = {}
+    for entry in entries:
+        ed = _to_date(entry.entry_date)
+        if ed is not None:
+            mood_lookup[ed] = entry.mood_rating
 
     for week in cal:
         row = []
@@ -378,7 +448,10 @@ def dashboard():
     week_sums = [0] * 7
     week_counts = [0] * 7
     for e in week_entries:
-        idx = e.entry_date.weekday()
+        ed = _to_date(e.entry_date)
+        if ed is None:
+            continue
+        idx = ed.weekday()
         week_sums[idx] += e.mood_rating
         week_counts[idx] += 1
     weekly_trend = [round(week_sums[i] / week_counts[i], 1) if week_counts[i] else None for i in range(7)]
@@ -387,7 +460,7 @@ def dashboard():
     last7 = []
     for delta in range(6, -1, -1):
         d = (today - timedelta(days=delta)).date()
-        day_vals = [e.mood_rating for e in entries if e.entry_date == d]
+        day_vals = [e.mood_rating for e in entries if _to_date(e.entry_date) == d]
         last7.append(round(sum(day_vals) / len(day_vals), 1) if day_vals else None)
 
     return render_template('mood_journal/dashboard.html',
@@ -478,10 +551,10 @@ def weekly_summaries():
     # Group entries by week start (Monday)
     weeks = defaultdict(list)
     for e in entries:
-        d = e.entry_date
-        # ensure d is a date object
-        if not isinstance(d, (date,)):
-            d = d.date()
+        d = _to_date(e.entry_date)
+        if d is None:
+            # skip entries with unparseable dates
+            continue
         week_start = d - timedelta(days=d.weekday())
         weeks[week_start].append(e)
 
@@ -489,6 +562,8 @@ def weekly_summaries():
     summaries = []
     for week_start in sorted(weeks.keys(), reverse=True):
         week_entries = weeks[week_start]
+        # Normalize entry_date on the entries so templates can safely call .strftime
+        _normalize_entries(week_entries)
         total = len(week_entries)
         avg = round(sum(e.mood_rating for e in week_entries) / total, 1) if total else None
 
@@ -574,6 +649,7 @@ def mood_journal():
     
     # Display entries for the logged-in user only
     entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).all()
+    _normalize_entries(entries)
     return render_template("mood_journal/index.html", entries=entries)
 
 def seed_test_entries():
