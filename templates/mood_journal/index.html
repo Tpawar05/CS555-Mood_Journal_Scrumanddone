@@ -124,8 +124,18 @@
                 Thoughts & Reflections
             </label>
             <textarea id="notes" name="notes" rows="4"
+
                       class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200"
                       placeholder="What's coloring your mood today? What are you grateful for?"></textarea>
+        </div>
+        <div class="mt-2 flex items-center justify-center gap-2">
+            <button type="button" id="voice-btn"
+                    class="px-3 py-2 bg-amber-100 text-amber-800 rounded-md border border-amber-200 hover:bg-amber-200 focus:outline-none"
+                    aria-pressed="false" aria-label="Start voice typing">
+                🎙️ Start voice typing
+            </button>
+
+            <span id="voice-status" class="text-sm text-gray-500" aria-live="polite"></span>
         </div>
 
         <!-- Image Upload -->
@@ -192,7 +202,7 @@
             label.textContent = `${val} – ${moodText} ${emoji}`;
         }
 
-        // --- Timer + Submit logic (your existing script) ---
+        // --- Timer Functionality ---
         (function() {
             const start = Date.now();
             let timerInterval = null;
@@ -283,6 +293,155 @@
             preview.classList.add('hidden');
         }
     </script>
+    <!-- html -->
+    <script>
+        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+            console.log('SpeechRecognition supported');
+        } else {
+            console.error('Speech recognition not supported in this browser.');
+        }
+        (function() {
+            const voiceBtn = document.getElementById('voice-btn');
+            const statusEl = document.getElementById('voice-status');
+            const notes = document.getElementById('notes');
+            const form = document.getElementById('mood-form');
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                if (voiceBtn) {
+                    voiceBtn.disabled = true;
+                    statusEl.textContent = 'Voice typing not supported in this browser.';
+                    voiceBtn.title = 'Not supported';
+                }
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = (document.documentElement.lang || 'en-US');
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+
+            let isListening = false;
+            let lastInterim = ''; // stores the previously-inserted interim text
+
+            function updateButton() {
+                voiceBtn.textContent = isListening ? '⏹️ Stop' : '🎙️ Start voice typing';
+                voiceBtn.setAttribute('aria-pressed', String(isListening));
+                statusEl.textContent = isListening ? 'Listening…' : '';
+            }
+
+            recognition.addEventListener('start', () => {
+                console.log('SpeechRecognition: started');
+                statusEl.textContent = 'Listening…';
+            });
+
+            recognition.addEventListener('result', (ev) => {
+                let finalTranscript = '';
+                let interimBuffer = '';
+
+                for (let i = ev.resultIndex; i < ev.results.length; ++i) {
+                    const res = ev.results[i];
+                    if (res.isFinal) {
+                        finalTranscript += res[0].transcript;
+                    } else {
+                        interimBuffer += res[0].transcript;
+                    }
+                }
+
+
+                // Remove previously added interim from textarea if present
+                if (lastInterim && notes.value.endsWith(lastInterim)) {
+                    notes.value = notes.value.slice(0, -lastInterim.length);
+                    lastInterim = '';
+                }
+
+                // Append final transcript permanently
+                if (finalTranscript) {
+                    const cur = notes.value;
+                    notes.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + finalTranscript;
+                }
+
+                // Append current interim as temporary text and remember it
+                if (interimBuffer) {
+                    const cur = notes.value;
+                    notes.value = cur + (cur && !cur.endsWith(' ') ? ' ' : '') + interimBuffer;
+                    lastInterim = interimBuffer;
+
+                } else {
+                    lastInterim = '';
+                }
+
+                // keep caret at end so typing appears natural
+                try {
+                    const end = notes.value.length;
+                    notes.selectionStart = notes.selectionEnd = end;
+                    notes.scrollTop = notes.scrollHeight;
+                } catch (e) {
+                    // ignore if textarea not focusable
+                }
+
+                // Update accessible status
+                statusEl.textContent = isListening ? ('Listening… ' + (interimBuffer || '')) : (interimBuffer || '');
+            });
+
+            recognition.addEventListener('end', () => {
+                if (isListening) {
+                    // some browsers stop automatically; restart if still intended
+                    try { recognition.start(); } catch (e) { isListening = false; updateButton(); }
+                } else {
+                    updateButton();
+                }
+            });
+
+            recognition.addEventListener('error', (ev) => {
+                console.error('SpeechRecognition: error', ev.error || ev);
+                statusEl.textContent = 'Voice error: ' + (ev.error || 'unknown');
+                isListening = false;
+                updateButton();
+            });
+
+            voiceBtn.addEventListener('click', () => {
+                if (!isListening) {
+                    try {
+                        recognition.start();
+                        isListening = true;
+                        console.log('Voice button: start requested');
+                    } catch (err) {
+                        statusEl.textContent = 'Could not start: ' + err.message;
+                        console.error('Voice start error:', err);
+                        isListening = false;
+                    }
+                } else {
+                    isListening = false;
+                    recognition.stop();
+                }
+                updateButton();
+            });
+
+            // Stop recognition when the form is submitted
+            form.addEventListener('submit', () => {
+                if (isListening) {
+                    isListening = false;
+                    recognition.stop();
+                    updateButton();
+                }
+            });
+
+            // accessibility: allow Ctrl+M to toggle
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'm') {
+                    e.preventDefault();
+                    voiceBtn.click();
+                }
+            });
+
+            updateButton();
+        })();
+    </script>
+
+
+
+
 
 
 </div>

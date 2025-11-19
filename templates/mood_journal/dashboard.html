@@ -2,6 +2,38 @@
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  /* Fade out non-selected moods */
+  .faded {
+    opacity: 0.25;
+  }
+
+  /* Small colored dot */
+  .mood-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 4px;
+  }
+
+  .dot-terrible { background-color: #ef4444; }
+  .dot-bad { background-color: #f97316; }
+  .dot-neutral { background-color: #eab308; }
+  .dot-good { background-color: #22c55e; }
+  .dot-excellent { background-color: #3b82f6; }
+
+  .emoji-hidden { visibility: hidden; }
+
+  .mood-marker {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -9,6 +41,7 @@
   <div class="p-4">
     <h1 class="text-2xl font-bold mb-4">Mood Dashboard - {{ current_month }}</h1>
 
+    <!-- TOP 3 METRICS -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <div class="p-4 bg-white rounded shadow">
         <div class="text-sm text-gray-500">Average Mood</div>
@@ -18,25 +51,61 @@
           {% if avg_bucket <= 1 %}😭{% elif avg_bucket == 2 %}☹️{% elif avg_bucket == 3 %}😐{% elif avg_bucket == 4 %}🙂{% else %}😄{% endif %}
         </div>
       </div>
+
       <div class="p-4 bg-white rounded shadow">
         <div class="text-sm text-gray-500">Total Entries</div>
         <div class="text-3xl font-semibold">{{ total_entries }}</div>
       </div>
+
       <div class="p-4 bg-white rounded shadow">
         <div class="text-sm text-gray-500">Mood Distribution</div>
         <canvas id="moodDistChart" height="80"></canvas>
       </div>
     </div>
 
+    <!-- MONTHLY CALENDAR BLOCK -->
     <div class="bg-white rounded shadow p-4 mb-6">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="font-semibold">Monthly Calendar</h2>
-        <div>
-          <a href="?year={{ (request.args.get('year') or '') }}&month={{ ((request.args.get('month') or '')|int - 1) }}" class="px-2">◀</a>
-          <a href="?year={{ (request.args.get('year') or '') }}&month={{ ((request.args.get('month') or '')|int + 1) }}" class="px-2">▶</a>
-        </div>
+        <h2 class="font-semibold text-xl">{{ current_month }}</h2>
       </div>
 
+      <!-- FILTER PILLS -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button class="px-3 py-1 rounded-full text-sm border bg-red-100 text-red-700"
+                onclick="applyFilter('terrible')">😭 Terrible (1–2)</button>
+
+        <button class="px-3 py-1 rounded-full text-sm border bg-orange-100 text-orange-700"
+                onclick="applyFilter('bad')">😟 Bad (3–4)</button>
+
+        <button class="px-3 py-1 rounded-full text-sm border bg-yellow-100 text-yellow-700"
+                onclick="applyFilter('neutral')">😐 Neutral (5–6)</button>
+
+        <button class="px-3 py-1 rounded-full text-sm border bg-green-100 text-green-700"
+                onclick="applyFilter('good')">🙂 Good (7–8)</button>
+
+        <button class="px-3 py-1 rounded-full text-sm border bg-blue-100 text-blue-700"
+                onclick="applyFilter('excellent')">😄 Excellent (9–10)</button>
+
+        <button class="px-3 py-1 rounded-full text-sm border bg-gray-100 text-gray-700"
+                onclick="applyFilter('')">Clear</button>
+      </div>
+
+      <!-- MONTHLY SUMMARY LINE -->
+      {% if summary_days > 0 %}
+      <div class="text-sm text-gray-600 mb-4">
+        {{ summary_days }} {{ "day" if summary_days == 1 else "days" }}
+        {{ "was" if summary_days == 1 else "were" }}
+        {{ summary_label }} — {{ summary_message }}
+      </div>
+      {% endif %}
+
+      <!-- MONTH SWITCH -->
+      <div class="mb-3">
+        <a href="?month={{ month-1 }}&filter={{ request.args.get('filter','') }}">◀</a>
+        <a href="?month={{ month+1 }}&filter={{ request.args.get('filter','') }}">▶</a>
+      </div>
+
+      <!-- CALENDAR TABLE -->
       <table class="w-full border-collapse">
         <thead>
           <tr class="text-sm text-gray-600">
@@ -50,21 +119,38 @@
           </tr>
         </thead>
         <tbody>
+          {% set selected_filter = request.args.get('filter') %}
           {% for week in calendar_dates %}
           <tr>
-            {% for day, mood in week %}
-              {% if day %}
-                <td class="align-top border p-2 h-28 relative" data-date="{{ day.isoformat() }}">
-                  <div class="text-xs text-gray-500">{{ day.day }}</div>
-                  {% if mood %}
-                    <div class="absolute bottom-2 right-2 text-xl" title="Mood {{ mood }}">
-                      {% if mood <= 2 %}😭{% elif mood <= 4 %}☹️{% elif mood <= 6 %}😐{% elif mood <= 8 %}🙂{% else %}😄{% endif %}
-                    </div>
-                  {% endif %}
-                </td>
-              {% else %}
-                <td class="border p-2 h-28 bg-gray-50"></td>
-              {% endif %}
+            {% for day, mood, bucket in week %}
+            {% if day %}
+              <td class="border p-2 h-28 align-top relative">
+
+                <div class="text-xs text-gray-500">{{ day.day }}</div>
+
+                {% if bucket %}
+                  {% set hide_emoji = selected_filter and bucket != selected_filter %}
+                  {% set fade_dot = selected_filter and bucket != selected_filter %}
+
+                  <div class="mood-marker">
+                    <span class="{% if hide_emoji %}emoji-hidden{% endif %}">
+                      {% if mood %}
+                        {% if mood <= 2 %}😭
+                        {% elif mood <= 4 %}😟
+                        {% elif mood <= 6 %}😐
+                        {% elif mood <= 8 %}🙂
+                        {% else %}😄
+                        {% endif %}
+                      {% endif %}
+                    </span>
+
+                    <span class="mood-dot dot-{{ bucket }} {% if fade_dot %}faded{% endif %}"></span>
+                  </div>
+                {% endif %}
+              </td>
+            {% else %}
+              <td class="border p-2 h-28 bg-gray-50"></td>
+            {% endif %}
             {% endfor %}
           </tr>
           {% endfor %}
@@ -72,11 +158,13 @@
       </table>
     </div>
 
+    <!-- CHARTS BELOW (unchanged) -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="p-4 bg-white rounded shadow">
         <h3 class="font-semibold mb-2">Weekly Trend (Mon→Sun)</h3>
         <canvas id="weeklyTrendChart" height="100"></canvas>
       </div>
+
       <div class="p-4 bg-white rounded shadow">
         <h3 class="font-semibold mb-2">Last 7 Days</h3>
         <canvas id="last7Chart" height="100"></canvas>
@@ -86,35 +174,58 @@
 </div>
 
 <script>
-(function(){
-  const moodDist = {{ mood_distribution | tojson }} || [0,0,0,0,0];
-  const weekly = {{ weekly_trend | tojson }} || [null,null,null,null,null,null,null];
-  const last7 = {{ last7_trend | tojson }} || [null,null,null,null,null,null,null];
+function applyFilter(bucket) {
+    const params = new URLSearchParams(window.location.search);
+    if (bucket) params.set("filter", bucket);
+    else params.delete("filter");
+    window.location.search = params.toString();
+}
+</script>
 
-  // Mood distribution doughnut (1..5 buckets)
-  new Chart(document.getElementById('moodDistChart').getContext('2d'), {
+<script>
+  const moodDist = {{ mood_distribution | tojson }};
+  const weekly = {{ weekly_trend | tojson }};   <!-- FIXED -->
+  const last7 = {{ last7_trend | tojson }};
+
+  new Chart(document.getElementById('moodDistChart'), {
     type: 'doughnut',
     data: {
-      labels: ['Terrible','Bad','Neutral','Good','Excellent'],
-      datasets: [{ data: moodDist, backgroundColor: ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6'] }]
+      labels: ["Terrible","Bad","Neutral","Good","Excellent"],
+      datasets: [{
+        data: moodDist,
+        backgroundColor: ["#ef4444","#f97316","#eab308","#22c55e","#3b82f6"]
+      }]
     },
-    options: { plugins: { legend: { position: 'bottom' } } }
+    options: { plugins: { legend: { position:'bottom' } }}
   });
 
-  // Weekly trend line
-  new Chart(document.getElementById('weeklyTrendChart').getContext('2d'), {
+  new Chart(document.getElementById('weeklyTrendChart'), {   <!-- FIXED -->
     type: 'line',
-    data: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{ data: weekly, borderColor: '#8b5cf6', tension: 0.4, spanGaps: true }] },
-    options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { display: false } } }
+    data: {
+      labels: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+      datasets: [{
+        data: weekly,
+        borderColor:"#8b5cf6",
+        tension:0.4,
+        spanGaps:true
+      }]
+    },
+    options:{ scales:{ y:{ min:0,max:10 }}, plugins:{legend:{display:false}}}
   });
 
-  // Last 7 days
-  new Chart(document.getElementById('last7Chart').getContext('2d'), {
-    type: 'line',
-    data: { labels: ['-6','-5','-4','-3','-2','-1','0'], datasets: [{ data: last7, borderColor: '#3b82f6', tension: 0.35, spanGaps: true }] },
-    options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { display: false } } }
+  new Chart(document.getElementById('last7Chart'), {
+    type:'line',
+    data:{
+      labels:["-6","-5","-4","-3","-2","-1","0"],
+      datasets:[{
+        data:last7,
+        borderColor:"#3b82f6",
+        tension:0.35,
+        spanGaps:true
+      }]
+    },
+    options:{ scales:{y:{min:0,max:10}}, plugins:{legend:{display:false}}}
   });
-})();
 </script>
 
 {% endblock %}

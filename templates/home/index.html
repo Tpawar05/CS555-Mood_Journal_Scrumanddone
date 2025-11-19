@@ -99,8 +99,27 @@ Mood Journal
             </div>
         </div>
 
+        <div class="h-8"></div>
 
-        
+        {# Account Settings card - visible only when logged in #}
+        {% if session.get('logged_in') %}
+        <div class="group relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-emerald-200 hover:border-emerald-400 transition-all duration-300 hover:shadow-xl">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400 to-green-500 opacity-8 rounded-full -mr-16 -mt-16"></div>
+            <div class="p-8">
+                <div class="text-5xl mb-4" style="animation: bounce 2s infinite; animation-delay: 0.5s;">⚙️</div>
+                <h3 class="text-2xl font-bold mb-3 text-gray-900">Account Settings</h3>
+                <p class="text-gray-600 mb-4">Update your password or delete your account.</p>
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">Security</span>
+                    <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">Profile</span>
+                </div>
+                <a href="/account" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-lg font-semibold hover:from-emerald-600 hover:to-green-600 transition-all duration-200 group-hover:scale-105">
+                    Manage Account
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </a>
+            </div>
+        </div>
+        {% endif %}
 
 
 {% endblock %}

@@ -1,5 +1,5 @@
 <!-- html -->
-from datetime import timedelta
+<!--from datetime import timedelta-->
 
 {% extends "base.html" %}
 
@@ -50,7 +50,7 @@ from datetime import timedelta
         <div class="p-3 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl text-white float-animation">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0118 0z"></path>
             </svg>
         </div>
         <div>
@@ -82,8 +82,39 @@ from datetime import timedelta
         </div>
         {% if entries %}
         <span class="text-sm text-gray-500">{{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}</span>
+       <!--Export All button-->
+        <div>
+            <a href="{{ url_for('export_all_entries') }}"
+                class="px-3 py-1 rounded-md text-sm bg-amber-500 text-white hover:bg-amber-600 shadow">
+                Export All
+            </a>
+        </div> 
         {% endif %}
     </div>
+
+    <!-- ⭐ NEW DATE RANGE EXPORT FORM ⭐ -->
+    {% if entries %}
+    <form method="GET" action="{{ url_for('export_range') }}"
+          class="flex items-center gap-3 mb-6">
+
+        <div>
+            <label for="start_date" class="text-sm text-gray-600">Start</label>
+            <input type="date" id="start_date" name="start_date"
+                   class="border px-2 py-1 rounded-lg text-sm">
+        </div>
+
+        <div>
+            <label for="end_date" class="text-sm text-gray-600">End</label>
+            <input type="date" id="end_date" name="end_date"
+                   class="border px-2 py-1 rounded-lg text-sm">
+        </div>
+
+        <button type="submit"
+                class="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600">
+            Export Range 📆
+        </button>
+    </form>
+    {% endif %}
 
     {% if entries %}
     <div class="space-y-3 max-h-96 overflow-y-auto">
@@ -139,6 +170,15 @@ from datetime import timedelta
                                         Delete
                                     </button>
                                 </form>
+
+                                <!--Exporting single entry-->
+                                <form action="{{ url_for('export_single_entry', entry_id=entry.id) }}" method="get">
+                                    <button type="submit"
+                                            class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50">
+                                        Export Entry
+                                    </button>
+                                </form>
+
                             </div>
                         </div>
                     </div>
