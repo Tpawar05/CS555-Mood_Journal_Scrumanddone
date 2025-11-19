@@ -1,19 +1,24 @@
 # tests/test_edit_delete.py
 import pytest
 from app import app, db
-from models import MoodEntry
+from models import MoodEntry, User
 from datetime import datetime
 
 @pytest.fixture
-def client():
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+def client(app):
+    """Create test client with app context"""
     with app.test_client() as client:
         with app.app_context():
             db.create_all()
-            # Seed a single test entry
+            # Create a test user
+            user = User(username="testuser", email="test@example.com")
+            user.set_password("testpass")
+            db.session.add(user)
+            db.session.commit()
+            
+            # Seed a single test entry for the user
             entry = MoodEntry(
-                user_id=1,
+                user_id=user.id,
                 entry_date=datetime.utcnow().date(),
                 mood_rating=5,
                 mood_label="Neutral",
@@ -24,10 +29,13 @@ def client():
         yield client
 
 
-def test_edit_entry(client):
+def test_edit_entry(client, app):
     """Test editing an existing entry"""
+    # Log in first
     with app.app_context():
-        entry = MoodEntry.query.first()
+        user = User.query.filter_by(username="testuser").first()
+        client.post("/", data={"username": "testuser", "password": "testpass"})
+        entry = MoodEntry.query.filter_by(user_id=user.id).first()
         assert entry is not None
 
     response = client.post(f'/edit/{entry.id}', data={
@@ -44,15 +52,19 @@ def test_edit_entry(client):
         assert updated.mood_rating == 8
 
 
-def test_delete_entry(client):
+def test_delete_entry(client, app):
     """Test deleting an entry"""
+    # Log in first
     with app.app_context():
-        entry = MoodEntry.query.first()
+        user = User.query.filter_by(username="testuser").first()
+        client.post("/", data={"username": "testuser", "password": "testpass"})
+        entry = MoodEntry.query.filter_by(user_id=user.id).first()
         assert entry is not None
+        entry_id = entry.id
 
-    response = client.post(f'/delete/{entry.id}', follow_redirects=True)
+    response = client.post(f'/delete/{entry_id}', follow_redirects=True)
     assert response.status_code == 200
 
     with app.app_context():
-        deleted = MoodEntry.query.get(entry.id)
+        deleted = MoodEntry.query.get(entry_id)
         assert deleted is None
