@@ -36,3 +36,4 @@ class MoodEntry(db.Model):
     tags = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=db.func.now())
     time_spent_seconds = db.Column(db.Integer)
+    image_path = db.Column(db.String(255))  # Path to uploaded image

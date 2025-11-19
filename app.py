@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
 import os
 from extensions import db
 from datetime import datetime, date, timedelta
 import calendar
+from werkzeug.utils import secure_filename
+import uuid
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
@@ -10,6 +12,19 @@ app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
 basedir = os.path.abspath(os.path.dirname(__file__))
 instance_path = os.path.join(basedir, 'instance')
 os.makedirs(instance_path, exist_ok=True)
+
+# Configure upload settings
+UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB max file size
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -164,6 +179,34 @@ def edit_entry(entry_id):
         entry.mood_rating = int(request.form.get('mood_rating', 5))
         entry.notes = request.form.get('notes')
 
+        # Handle image removal
+        if request.form.get('remove_image') == '1' and entry.image_path:
+            # Delete the old image file
+            old_image_path = os.path.join(basedir, 'static', entry.image_path)
+            if os.path.exists(old_image_path):
+                os.remove(old_image_path)
+            entry.image_path = None
+
+        # Handle new image upload
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename != '' and allowed_file(file.filename):
+                # Delete old image if exists
+                if entry.image_path:
+                    old_image_path = os.path.join(basedir, 'static', entry.image_path)
+                    if os.path.exists(old_image_path):
+                        os.remove(old_image_path)
+                
+                # Save new image
+                filename = secure_filename(file.filename)
+                file_ext = filename.rsplit('.', 1)[1].lower()
+                unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                file.save(file_path)
+                entry.image_path = os.path.join('uploads', unique_filename)
+            elif file and file.filename != '':
+                flash('Invalid file type. Please upload an image (PNG, JPG, JPEG, GIF, or WEBP).', 'error')
+
         db.session.commit()
         flash('Entry updated successfully!')
         return redirect(url_for('logs'))
@@ -302,6 +345,22 @@ def mood_journal():
         rating = int(request.form.get("mood_rating", 5))
         notes = request.form.get("notes")
 
+        # Handle file upload
+        image_path = None
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename != '' and allowed_file(file.filename):
+                # Generate unique filename to prevent conflicts
+                filename = secure_filename(file.filename)
+                file_ext = filename.rsplit('.', 1)[1].lower()
+                unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                file.save(file_path)
+                # Store relative path for database
+                image_path = os.path.join('uploads', unique_filename)
+            elif file and file.filename != '':
+                flash('Invalid file type. Please upload an image (PNG, JPG, JPEG, GIF, or WEBP).', 'error')
+
         # Convert date string to Python date
         entry_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.utcnow().date()
 
@@ -328,7 +387,8 @@ def mood_journal():
             mood_rating=rating,
             mood_label=mood,
             notes=notes,
-            time_spent_seconds=time_spent
+            time_spent_seconds=time_spent,
+            image_path=image_path
         )
 
         db.session.add(new_entry)
