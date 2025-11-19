@@ -193,6 +193,15 @@
             {% else %}
             <p class="text-sm text-gray-400 ml-11 italic">Silent reflection</p>
             {% endif %}
+
+            {% if entry.image_path %}
+            <div class="mt-3 ml-11">
+                <img src="{{ url_for('static', filename=entry.image_path) }}" 
+                     alt="Entry image" 
+                     class="max-w-md h-auto rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                     onclick="openImageModal('{{ url_for('static', filename=entry.image_path) }}')">
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
@@ -240,6 +249,21 @@
             document.querySelectorAll('[id^="menu-"]').forEach(el => el.classList.add('hidden'));
         }
     });
+
+    // Image modal functionality
+    function openImageModal(imageSrc) {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+        modal.onclick = function() { document.body.removeChild(modal); };
+        
+        const img = document.createElement('img');
+        img.src = imageSrc;
+        img.className = 'max-w-4xl max-h-[90vh] rounded-lg';
+        img.onclick = function(e) { e.stopPropagation(); };
+        
+        modal.appendChild(img);
+        document.body.appendChild(modal);
+    }
 </script>
 
 {% endblock %}
