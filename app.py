@@ -6,9 +6,6 @@ from extensions import db
 from datetime import datetime, date, timedelta
 import calendar
 
-
-
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
 
@@ -21,7 +18,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-from models import MoodEntry, User  
+from models import MoodEntry, User
 
 
 def _to_date(val):
@@ -89,10 +86,9 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Check if user exists in database
         user = User.query.filter_by(username=username).first()
-        
-        if user and user.check_password(password) :
+
+        if user and user.check_password(password):
             session['logged_in'] = True
             session['user_id'] = user.id
             return redirect(url_for('home'))
@@ -108,6 +104,7 @@ def login():
 
     return render_template('home/login.html')
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -116,25 +113,24 @@ def register():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         pin = request.form.get('PIN')
+
         # Validate passwords match
         if password != confirm_password:
             flash('Passwords do not match', 'error')
             return redirect(url_for('register'))
 
-        # Check if username already exists
         if User.query.filter_by(username=username).first():
             flash('Username already exists', 'error')
             return redirect(url_for('register'))
 
-        # Check if email already exists
         if User.query.filter_by(email=email).first():
             flash('Email already exists', 'error')
             return redirect(url_for('register'))
 
-        # Create new user
+        # Create new user (preserve PIN functionality)
         new_user = User(username=username, email=email, pin=pin)
         new_user.set_password(password)
-        
+
         db.session.add(new_user)
         db.session.commit()
 
@@ -147,7 +143,7 @@ def register():
 @app.route('/home')
 def home():
     if not session.get('logged_in'):
-        return redirect(url_for('login')) 
+        return redirect(url_for('login'))
     return render_template('home/index.html', page_id='home')
 
 
@@ -156,16 +152,14 @@ def profile():
     """Display user's personal information"""
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
-    # Get the current user from the database
+
     user_id = session.get('user_id')
     if not user_id:
         flash('Please log in to view your profile', 'error')
         return redirect(url_for('login'))
-    
+
     user = User.query.get_or_404(user_id)
-    
-    # Get user statistics
+
     total_entries = MoodEntry.query.filter_by(user_id=user_id).count()
     recent_entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).limit(5).all()
     # Normalize recent entry dates for template rendering
@@ -177,8 +171,7 @@ def profile():
 def logs():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
-    # Only show entries for the logged-in user
+
     user_id = session.get('user_id')
     if user_id:
         entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).all()
@@ -189,50 +182,43 @@ def logs():
     return render_template('mood_journal/logs.html', entries=entries, page_id='home')
 
 
-# DELETE ENTRY ROUTE
 @app.route('/delete/<int:entry_id>', methods=['POST'])
 def delete_entry(entry_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
+
     user_id = session.get('user_id')
     entry = MoodEntry.query.get_or_404(entry_id)
-    
-    # Ensure user can only delete their own entries
+
     if entry.user_id != user_id:
         flash('You can only delete your own entries', 'error')
         return redirect(url_for('logs'))
-    
+
     db.session.delete(entry)
     db.session.commit()
     flash('Entry deleted successfully!')
     return redirect(url_for('logs'))
 
 
-# EDIT ENTRY ROUTE
 @app.route('/edit/<int:entry_id>', methods=['GET', 'POST'])
 def edit_entry(entry_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
+
     user_id = session.get('user_id')
     entry = MoodEntry.query.get_or_404(entry_id)
-    
-    # Ensure user can only edit their own entries
+
     if entry.user_id != user_id:
         flash('You can only edit your own entries', 'error')
         return redirect(url_for('logs'))
 
     if request.method == 'POST':
-        from datetime import datetime
-
-        # Update editable fields
         entry.mood_label = request.form.get('mood_label')
-        
+
         date_str = request.form.get('entry_date')
         if date_str:
             entry.entry_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        
+
         entry.mood_rating = int(request.form.get('mood_rating', 5))
         entry.notes = request.form.get('notes')
 
@@ -242,7 +228,6 @@ def edit_entry(entry_id):
 
     return render_template('mood_journal/edit.html', entry=entry)
 
-# Exporting single entry to CSV
 
 @app.route('/export/<int:entry_id>')
 def export_single_entry(entry_id):
@@ -251,9 +236,8 @@ def export_single_entry(entry_id):
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # Header
     writer.writerow([
-        "Entry ID", "Date", "Mood Label", "Rating", 
+        "Entry ID", "Date", "Mood Label", "Rating",
         "Notes", "Time Spent (sec)", "Created At"
     ])
 
@@ -275,7 +259,7 @@ def export_single_entry(entry_id):
     response.headers["Content-type"] = "text/csv"
     return response
 
-# Exporting all entries to CSV
+
 @app.route('/export-all')
 def export_all_entries():
     entries = MoodEntry.query.order_by(MoodEntry.entry_date.desc()).all()
@@ -284,7 +268,7 @@ def export_all_entries():
     writer = csv.writer(output)
 
     writer.writerow([
-        "Entry ID", "Date", "Mood Label", "Rating", 
+        "Entry ID", "Date", "Mood Label", "Rating",
         "Notes", "Time Spent (sec)", "Created At"
     ])
 
@@ -305,19 +289,15 @@ def export_all_entries():
     return response
 
 
-
-#Export entries given a date range
 @app.route('/export-range')
 def export_range():
     start = request.args.get('start_date')
     end = request.args.get('end_date')
 
-    # Validate: must have both dates
     if not start or not end:
         flash("Please choose both start and end dates.", "error")
         return redirect(url_for('logs'))
 
-    #Convert date strings
     try:
         start_date = datetime.strptime(start, "%Y-%m-%d").date()
         end_date = datetime.strptime(end, "%Y-%m-%d").date()
@@ -325,13 +305,11 @@ def export_range():
         flash("Invalid date format.", "error")
         return redirect(url_for('logs'))
 
-    # Query entries in range
     entries = MoodEntry.query.filter(
         MoodEntry.entry_date >= start_date,
         MoodEntry.entry_date <= end_date
     ).order_by(MoodEntry.entry_date.asc()).all()
 
-    # Prepare CSV
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -359,9 +337,6 @@ def export_range():
     return response
 
 
-
-
-
 @app.route('/logout')
 def logout():
     session.clear()
@@ -372,13 +347,12 @@ def logout():
 def dashboard():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
+
     user_id = session.get('user_id')
     if not user_id:
         flash('Please log in to view dashboard', 'error')
         return redirect(url_for('login'))
 
-    # allow optional month/year via query params
     today = datetime.now()
     try:
         year = int(request.args.get('year', today.year))
@@ -387,9 +361,7 @@ def dashboard():
         year = today.year
         month = today.month
 
-    # calendar matrix for the requested month
     cal = calendar.monthcalendar(year, month)
-    calendar_dates = []
 
     start_date = date(year, month, 1)
     if month == 12:
@@ -409,20 +381,7 @@ def dashboard():
         if ed is not None:
             mood_lookup[ed] = entry.mood_rating
 
-    for week in cal:
-        row = []
-        for d in week:
-            if d == 0:
-                row.append((None, None))
-            else:
-                cell_date = date(year, month, d)
-                row.append((cell_date, mood_lookup.get(cell_date)))
-        calendar_dates.append(row)
-
-    total_entries = len(entries)
-    average_mood = sum(e.mood_rating for e in entries) / total_entries if total_entries > 0 else 0
-
-    # bucket function: map raw rating (1-10) to 1-5
+    # Original numeric bucket function (used for charts)
     def bucket(r):
         if r <= 2:
             return 1
@@ -434,11 +393,90 @@ def dashboard():
             return 4
         return 5
 
+    selected_filter = request.args.get("filter") or None
+
+    # Named bucket for calendar/filter
+    def get_bucket(r):
+        if r is None:
+            return None
+        if r <= 2:
+            return "terrible"
+        if r <= 4:
+            return "bad"
+        if r <= 6:
+            return "neutral"
+        if r <= 8:
+            return "good"
+        return "excellent"
+
+
+    # Build full calendar data
+    calendar_dates = []
+    for week in cal:
+        row = []
+        for d in week:
+            if d == 0:
+                row.append((None, None, None))
+            else:
+                cell_date = date(year, month, d)
+                mood = mood_lookup.get(cell_date)
+                bucket_name = get_bucket(mood) if mood else None
+                row.append((cell_date, mood, bucket_name))
+        calendar_dates.append(row)
+
+    # Count bucket totals
+    bucket_counts = {
+        "terrible": 0,
+        "bad": 0,
+        "neutral": 0,
+        "good": 0,
+        "excellent": 0,
+    }
+
+    for week in calendar_dates:
+        for day, mood, bucket_name in week:
+            if bucket_name:
+                bucket_counts[bucket_name] += 1
+
+    # If no moods at all, default summary to neutral/0
+    if any(bucket_counts.values()):
+        summary_bucket_name = selected_filter if selected_filter else max(
+            bucket_counts, key=lambda b: bucket_counts[b]
+        )
+    else:
+        summary_bucket_name = selected_filter or "neutral"
+
+    bucket_label_map = {
+        "terrible": "Terrible (1–2)",
+        "bad": "Bad (3–4)",
+        "neutral": "Neutral (5–6)",
+        "good": "Good (7–8)",
+        "excellent": "Excellent (9–10)",
+    }
+
+    bucket_msg_map = {
+        "terrible": "Rough days, please be kind to yourself.",
+        "bad": "Tougher days, take note of what drains you.",
+        "neutral": "Pretty steady, a neutral baseline.",
+        "good": "Plenty of good days!",
+        "excellent": "Lots of amazing days, celebrate what’s working.",
+    }
+
+    summary_days = bucket_counts.get(summary_bucket_name, 0)
+    summary_label = bucket_label_map[summary_bucket_name]
+    summary_message = bucket_msg_map[summary_bucket_name]
+    summary_day_word = "day" if summary_days == 1 else "days"
+
+    total_entries = len(entries)
+    average_mood = (
+        sum(e.mood_rating for e in entries) / total_entries
+        if total_entries > 0 else 0
+    )
+
     mood_distribution = [0] * 5
     for e in entries:
         mood_distribution[bucket(e.mood_rating) - 1] += 1
 
-    # weekly trend for current week (Mon..Sun)
     week_start = (today - timedelta(days=today.weekday())).date()
     week_entries = MoodEntry.query.filter(
         MoodEntry.user_id == user_id,
@@ -454,28 +492,39 @@ def dashboard():
         idx = ed.weekday()
         week_sums[idx] += e.mood_rating
         week_counts[idx] += 1
-    weekly_trend = [round(week_sums[i] / week_counts[i], 1) if week_counts[i] else None for i in range(7)]
 
-    # last 7 days trend
+
+    weekly_trend = [
+        round(week_sums[i] / week_counts[i], 1) if week_counts[i] else None
+        for i in range(7)
+    ]
+
     last7 = []
     for delta in range(6, -1, -1):
         d = (today - timedelta(days=delta)).date()
         day_vals = [e.mood_rating for e in entries if _to_date(e.entry_date) == d]
         last7.append(round(sum(day_vals) / len(day_vals), 1) if day_vals else None)
 
-    return render_template('mood_journal/dashboard.html',
-                           calendar_dates=calendar_dates,
-                           current_month=date(year, month, 1).strftime('%B %Y'),
-                           average_mood=average_mood,
-                           total_entries=total_entries,
-                           mood_distribution=mood_distribution,
-                           weekly_trend=weekly_trend,
-                           last7_trend=last7)
+    return render_template(
+        'mood_journal/dashboard.html',
+        calendar_dates=calendar_dates,
+        current_month=date(year, month, 1).strftime('%B %Y'),
+        average_mood=average_mood,
+        total_entries=total_entries,
+        mood_distribution=mood_distribution,
+        weekly_trend=weekly_trend,
+        last7_trend=last7,
+        month=month,
+        year=year,
+        summary_days=summary_days,
+        summary_day_word=summary_day_word,
+        summary_label=summary_label,
+        summary_message=summary_message,
+    )
 
 
 @app.route('/account', methods=['GET', 'POST'])
 def account():
-    # Account settings: change password, delete account
     if not session.get('logged_in'):
         return redirect(url_for('login'))
 
@@ -487,7 +536,6 @@ def account():
     if request.method == 'POST':
         action = request.form.get('action')
 
-        # Change password
         if action == 'change_password':
             current = request.form.get('current_password')
             new = request.form.get('new_password')
@@ -506,9 +554,7 @@ def account():
             flash('Password updated successfully', 'success')
             return redirect(url_for('account'))
 
-        # Delete account
         if action == 'delete_account':
-            # Remove user entries first to satisfy FK constraints
             MoodEntry.query.filter_by(user_id=user.id).delete()
             db.session.delete(user)
             db.session.commit()
@@ -521,17 +567,16 @@ def account():
 
 @app.route('/check-password', methods=['POST'])
 def check_password():
-    """Endpoint to validate current password in real-time"""
     if not session.get('logged_in'):
         return {'correct': False}
-    
+
     user = User.query.get(session.get('user_id'))
     if not user:
         return {'correct': False}
-    
+
     data = request.get_json()
     password = data.get('password', '')
-    
+
     correct = user.check_password(password)
     return {'correct': correct}
 
@@ -541,14 +586,12 @@ def weekly_summaries():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
 
-    # Compute weekly aggregates for the logged-in user
-    user_id = session.get('user_id')
     from collections import defaultdict
 
-    # Get all entries for the user ordered by date
+    user_id = session.get('user_id')
+
     entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.entry_date).all()
 
-    # Group entries by week start (Monday)
     weeks = defaultdict(list)
     for e in entries:
         d = _to_date(e.entry_date)
@@ -558,7 +601,6 @@ def weekly_summaries():
         week_start = d - timedelta(days=d.weekday())
         weeks[week_start].append(e)
 
-    # Build summary list sorted by descending week_start (most recent first)
     summaries = []
     for week_start in sorted(weeks.keys(), reverse=True):
         week_entries = weeks[week_start]
@@ -567,7 +609,6 @@ def weekly_summaries():
         total = len(week_entries)
         avg = round(sum(e.mood_rating for e in week_entries) / total, 1) if total else None
 
-        # find highest and lowest mood entries (sample notable entries)
         highest = max(week_entries, key=lambda x: x.mood_rating) if total else None
         lowest = min(week_entries, key=lambda x: x.mood_rating) if total else None
 
@@ -581,40 +622,35 @@ def weekly_summaries():
             'entries': week_entries,
         })
 
-    # If no entries, still show empty list
     return render_template('mood_journal/weekly_summaries.html', summaries=summaries)
 
 
 @app.route("/mood-journal", methods=["GET", "POST"])
 def mood_journal():
     from datetime import datetime
-    
+
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
+
     user_id = session.get('user_id')
     if not user_id:
         flash('Please log in to create mood entries', 'error')
         return redirect(url_for('login'))
 
     if request.method == "POST":
-        # Calculate time spent
         start_time = session.get('entry_start_time')
         time_spent = 0
         if start_time:
             time_spent = int((datetime.utcnow() - datetime.fromisoformat(start_time)).total_seconds())
-            session.pop('entry_start_time', None)  # Clear the start time
+            session.pop('entry_start_time', None)
 
-        # Grab form data
-        title = request.form.get("title")  # from the HTML form
+        title = request.form.get("title")
         date_str = request.form.get("date")
         rating = int(request.form.get("mood_rating", 5))
         notes = request.form.get("notes")
 
-        # Convert date string to Python date
         entry_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.utcnow().date()
 
-        # If title provided, use it as label; else derive label from rating
         if title:
             mood = title.strip()
         elif rating <= 2:
@@ -630,34 +666,27 @@ def mood_journal():
         else:
             mood = "Amazing"
 
-        # Create and save new entry
         new_entry = MoodEntry(
             user_id=user_id,
             entry_date=entry_date,
             mood_rating=rating,
             mood_label=mood,
             notes=notes,
-            time_spent_seconds=time_spent
+            time_spent_seconds=time_spent,
         )
 
         db.session.add(new_entry)
         db.session.commit()
         return redirect("/mood-journal")
 
-    # Set start time when loading the page
     session['entry_start_time'] = datetime.utcnow().isoformat()
-    
-    # Display entries for the logged-in user only
+
     entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).all()
     _normalize_entries(entries)
     return render_template("mood_journal/index.html", entries=entries)
 
-def seed_test_entries():
-    """
-    Seed the database with sample mood entries for testing.
-    Automatically skipped if entries already exist.
-    """
 
+def seed_test_entries():
     from datetime import datetime, timedelta
     from models import MoodEntry
 
@@ -694,5 +723,5 @@ def init_db():
 if __name__ == '__main__':
     with app.app_context():
         init_db()
-        seed_test_entries() #creates entries if none exist 
+        seed_test_entries()
     app.run(debug=True)
