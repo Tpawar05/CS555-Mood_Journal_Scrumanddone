@@ -91,16 +91,56 @@ def home():
     return render_template('home/index.html', page_id='home')
 
 
+@app.route('/profile')
+def profile():
+    """Display user's personal information"""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    # Get the current user from the database
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Please log in to view your profile', 'error')
+        return redirect(url_for('login'))
+    
+    user = User.query.get_or_404(user_id)
+    
+    # Get user statistics
+    total_entries = MoodEntry.query.filter_by(user_id=user_id).count()
+    recent_entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).limit(5).all()
+    
+    return render_template('home/profile.html', user=user, total_entries=total_entries, recent_entries=recent_entries)
+
+
 @app.route('/logs')
 def logs():
-    entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    # Only show entries for the logged-in user
+    user_id = session.get('user_id')
+    if user_id:
+        entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).all()
+    else:
+        entries = []
+    
     return render_template('mood_journal/logs.html', entries=entries, page_id='home')
 
 
 # DELETE ENTRY ROUTE
 @app.route('/delete/<int:entry_id>', methods=['POST'])
 def delete_entry(entry_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    user_id = session.get('user_id')
     entry = MoodEntry.query.get_or_404(entry_id)
+    
+    # Ensure user can only delete their own entries
+    if entry.user_id != user_id:
+        flash('You can only delete your own entries', 'error')
+        return redirect(url_for('logs'))
+    
     db.session.delete(entry)
     db.session.commit()
     flash('Entry deleted successfully!')
@@ -110,7 +150,16 @@ def delete_entry(entry_id):
 # EDIT ENTRY ROUTE
 @app.route('/edit/<int:entry_id>', methods=['GET', 'POST'])
 def edit_entry(entry_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    user_id = session.get('user_id')
     entry = MoodEntry.query.get_or_404(entry_id)
+    
+    # Ensure user can only edit their own entries
+    if entry.user_id != user_id:
+        flash('You can only edit your own entries', 'error')
+        return redirect(url_for('logs'))
 
     if request.method == 'POST':
         from datetime import datetime
@@ -257,6 +306,11 @@ def logout():
 def dashboard():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Please log in to view dashboard', 'error')
+        return redirect(url_for('login'))
 
     # allow optional month/year via query params
     today = datetime.now()
@@ -278,6 +332,7 @@ def dashboard():
         end_date = date(year, month + 1, 1)
 
     entries = MoodEntry.query.filter(
+        MoodEntry.user_id == user_id,
         MoodEntry.entry_date >= start_date,
         MoodEntry.entry_date < end_date
     ).order_by(MoodEntry.entry_date).all()
@@ -316,6 +371,7 @@ def dashboard():
     # weekly trend for current week (Mon..Sun)
     week_start = (today - timedelta(days=today.weekday())).date()
     week_entries = MoodEntry.query.filter(
+        MoodEntry.user_id == user_id,
         MoodEntry.entry_date >= week_start,
         MoodEntry.entry_date < week_start + timedelta(days=7)
     ).all()
@@ -457,6 +513,14 @@ def weekly_summaries():
 @app.route("/mood-journal", methods=["GET", "POST"])
 def mood_journal():
     from datetime import datetime
+    
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Please log in to create mood entries', 'error')
+        return redirect(url_for('login'))
 
     if request.method == "POST":
         # Calculate time spent
@@ -493,7 +557,7 @@ def mood_journal():
 
         # Create and save new entry
         new_entry = MoodEntry(
-            user_id=1,  # placeholder until auth is connected
+            user_id=user_id,
             entry_date=entry_date,
             mood_rating=rating,
             mood_label=mood,
@@ -508,8 +572,8 @@ def mood_journal():
     # Set start time when loading the page
     session['entry_start_time'] = datetime.utcnow().isoformat()
     
-    # Display entries
-    entries = MoodEntry.query.order_by(MoodEntry.timestamp.desc()).all()
+    # Display entries for the logged-in user only
+    entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).all()
     return render_template("mood_journal/index.html", entries=entries)
 
 def seed_test_entries():
