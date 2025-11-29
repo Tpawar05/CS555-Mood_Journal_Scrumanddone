@@ -549,6 +549,77 @@ def dashboard():
         day_vals = [e.mood_rating for e in entries if _to_date(e.entry_date) == d]
         last7.append(round(sum(day_vals) / len(day_vals), 1) if day_vals else None)
 
+
+    #  STREAK CALCULATION
+    # ---------------------------------------------------
+    all_entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.entry_date.asc()).all()
+    # Normalize dates
+    entry_dates = sorted({_to_date(e.entry_date) for e in all_entries if _to_date(e.entry_date)})
+
+    current_streak = 0
+    longest_streak = 0
+
+    if entry_dates:
+        # For longest streak: go thru sorted list
+        streak = 1
+        for i in range(1, len(entry_dates)):
+            if entry_dates[i] == entry_dates[i-1] + timedelta(days=1):
+                streak += 1
+            else:
+                longest_streak = max(longest_streak, streak)
+                streak = 1
+        longest_streak = max(longest_streak, streak)
+
+        # For current streak
+        today_date = date.today()
+        if entry_dates[-1] == today_date:
+            current_streak = 1
+            i = len(entry_dates) - 1
+            while i > 0 and entry_dates[i] == entry_dates[i-1] + timedelta(days=1):
+                current_streak += 1
+                i -= 1
+        elif entry_dates[-1] == today_date - timedelta(days=1):
+            # If yesterday logged, count backward
+            current_streak = 1
+            i = len(entry_dates) - 1
+            while i > 0 and entry_dates[i] == entry_dates[i-1] + timedelta(days=1):
+                current_streak += 1
+                i -= 1
+        else:
+            current_streak = 0
+
+
+    #  BADGE LOGIC
+
+    badges = []
+
+    # Streak badges
+    streak_milestones = [1, 3, 7, 14, 30]
+    for m in streak_milestones:
+        if current_streak >= m:
+            if m == 1:
+                badges.append("🥇 1-Day Streak")
+            elif m == 3:
+                badges.append("🥈 3-Day Streak")
+            elif m == 7:
+                badges.append("🔥 7-Day Streak")
+            elif m == 14:
+                badges.append("✨ 14-Day Streak")
+            elif m == 30:
+                badges.append("🌟 30-Day Streak")
+
+    # Total entry count badges
+    entry_milestones = [10, 25, 50, 100]
+    for m in entry_milestones:
+        if total_entries >= m:
+            badges.append(f"📘 {m} Entries")
+
+    # Sort badges
+    badges.sort()
+
+
+
+
     return render_template(
         'mood_journal/dashboard.html',
         calendar_dates=calendar_dates,
@@ -564,6 +635,9 @@ def dashboard():
         summary_day_word=summary_day_word,
         summary_label=summary_label,
         summary_message=summary_message,
+        current_streak=current_streak,
+        longest_streak=longest_streak,
+        badges=badges
     )
 
 
