@@ -1,6 +1,4 @@
-<!-- html -->
-<!--from datetime import timedelta-->
-
+<!— html —>
 {% extends "base.html" %}
 
 {% block title %}Mood Journal • Student Starter Pack{% endblock %}
@@ -8,24 +6,12 @@
 {% block extra_head %}
 <style>
     @keyframes float {
-        0% {
-            transform: translateY(0px) rotate(0deg);
-        }
-
-        50% {
-            transform: translateY(-10px) rotate(5deg);
-        }
-
-        100% {
-            transform: translateY(0px) rotate(0deg);
-        }
+        0% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(5deg); }
+        100% { transform: translateY(0px) rotate(0deg); }
     }
-
-    .float-animation {
-        animation: float 4s ease-in-out infinite;
-    }
+    .float-animation { animation: float 4s ease-in-out infinite; }
 </style>
-
 {% endblock %}
 
 {% block content %}
@@ -45,7 +31,7 @@
     <a href="/home" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6">
         ← Back to Home
     </a>
-    
+
     <div class="flex items-center gap-4 mb-4">
         <div class="p-3 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl text-white float-animation">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +58,6 @@
     </div>
 </div>
 
-
 <!-- Right: Mood History -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
     <div class="flex items-center justify-between mb-6">
@@ -82,35 +67,26 @@
         </div>
         {% if entries %}
         <span class="text-sm text-gray-500">{{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}</span>
-       <!--Export All button-->
         <div>
             <a href="{{ url_for('export_all_entries') }}"
-                class="px-3 py-1 rounded-md text-sm bg-amber-500 text-white hover:bg-amber-600 shadow">
+               class="px-3 py-1 rounded-md text-sm bg-amber-500 text-white hover:bg-amber-600 shadow">
                 Export All
             </a>
-        </div> 
+        </div>
         {% endif %}
     </div>
 
-    <!-- ⭐ NEW DATE RANGE EXPORT FORM ⭐ -->
     {% if entries %}
-    <form method="GET" action="{{ url_for('export_range') }}"
-          class="flex items-center gap-3 mb-6">
-
+    <form method="GET" action="{{ url_for('export_range') }}" class="flex items-center gap-3 mb-6">
         <div>
             <label for="start_date" class="text-sm text-gray-600">Start</label>
-            <input type="date" id="start_date" name="start_date"
-                   class="border px-2 py-1 rounded-lg text-sm">
+            <input type="date" id="start_date" name="start_date" class="border px-2 py-1 rounded-lg text-sm">
         </div>
-
         <div>
             <label for="end_date" class="text-sm text-gray-600">End</label>
-            <input type="date" id="end_date" name="end_date"
-                   class="border px-2 py-1 rounded-lg text-sm">
+            <input type="date" id="end_date" name="end_date" class="border px-2 py-1 rounded-lg text-sm">
         </div>
-
-        <button type="submit"
-                class="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600">
+        <button type="submit" class="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600">
             Export Range 📆
         </button>
     </form>
@@ -119,28 +95,35 @@
     {% if entries %}
     <div class="space-y-3 max-h-96 overflow-y-auto">
         {% for entry in entries %}
-        <div class="group relative p-4 rounded-xl border-l-4 bg-gradient-to-r from-white to-gray-50 hover:shadow-md transition-all duration-200
-                {% if entry.mood_rating >= 8 %}border-green-400 hover:from-green-50 hover:to-emerald-50
-                {% elif entry.mood_rating >= 5 %}border-yellow-400 hover:from-yellow-50 hover:to-amber-50
-                {% else %}border-red-400 hover:from-red-50 hover:to-pink-50{% endif %}">
+        {% set border_class = "" %}
+        {% if entry.mood_rating >= 9 %}
+        {% set border_class = "border-emerald-500 hover:from-emerald-50 hover:to-green-50" %}
+        {% elif entry.mood_rating >= 7 %}
+        {% set border_class = "border-purple-500 hover:from-purple-50 hover:to-fuchsia-50" %}
+        {% elif entry.mood_rating >= 5 %}
+        {% set border_class = "border-blue-500 hover:from-blue-50 hover:to-cyan-50" %}
+        {% elif entry.mood_rating >= 3 %}
+        {% set border_class = "border-amber-500 hover:from-amber-50 hover:to-orange-50" %}
+        {% else %}
+        {% set border_class = "border-red-500 hover:from-red-50 hover:to-rose-50" %}
+        {% endif %}
+
+        <div id="entry-{{ entry.id }}" class="group relative p-4 rounded-xl border-l-4 bg-gradient-to-r from-white to-gray-50 hover:shadow-md transition-all duration-200 {{ border_class }}">
             <div class="flex items-start justify-between mb-2">
                 <div class="flex items-center gap-3">
                     <span class="text-2xl">
-                        {% if entry.mood_rating >= 8 %}😄
-                        {% elif entry.mood_rating >= 5 %}🙂
-                        {% else %}😢{% endif %}
+                        {% if entry.mood_rating >= 9 %}🤩{% elif entry.mood_rating >= 7 %}😄{% elif entry.mood_rating >= 5 %}😌{% elif entry.mood_rating >= 3 %}😕{% else %}😫{% endif %}
                     </span>
                     <div>
                         <span class="font-medium text-gray-900">{{ entry.mood_label }}</span>
                         <span class="text-xs text-gray-500 ml-1">(Rating: {{ entry.mood_rating }}/10)</span>
-
                         <p class="text-xs text-gray-500">
                             {{ entry.entry_date.strftime('%A, %b %d, %Y') }}
                         </p>
                     </div>
-
                 </div>
-                <!-- Dropdown menu with Edit and Delete -->
+
+                <!-- Dropdown menu with Edit, Delete, Export, and Hide -->
                 <div class="flex items-center gap-2">
                     <span class="text-xs text-gray-400">{{ entry.timestamp.strftime('%I:%M %p') }}</span>
                     {% if entry.time_spent_seconds is defined %}
@@ -153,38 +136,28 @@
                             ⋯
                         </button>
 
-                        <div id="menu-{{ entry.id }}"
-                             class="hidden absolute right-0 z-10 mt-2 w-32 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                        <div id="menu-{{ entry.id }}" class="hidden absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
                             <div class="py-1">
+                                <button type="button" id="hide-btn-{{ entry.id }}" onclick="toggleHide('{{ entry.id }}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    Hide
+                                </button>
+
                                 <form action="{{ url_for('edit_entry', entry_id=entry.id) }}" method="get">
-                                    <button type="submit"
-                                            class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50">
-                                        Edit
-                                    </button>
+                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50">Edit</button>
                                 </form>
 
-                                <form action="{{ url_for('delete_entry', entry_id=entry.id) }}" method="post"
-                                      onsubmit="return confirm('Delete this entry?');">
-                                    <button type="submit"
-                                            class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                                        Delete
-                                    </button>
+                                <form action="{{ url_for('delete_entry', entry_id=entry.id) }}" method="post" onsubmit="return confirm('Delete this entry?');">
+                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</button>
                                 </form>
 
-                                <!--Exporting single entry-->
                                 <form action="{{ url_for('export_single_entry', entry_id=entry.id) }}" method="get">
-                                    <button type="submit"
-                                            class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50">
-                                        Export Entry
-                                    </button>
+                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50">Export Entry</button>
                                 </form>
-
                             </div>
                         </div>
                     </div>
                 </div>
                 <!-- End dropdown menu -->
-
 
             </div>
 
@@ -196,8 +169,8 @@
 
             {% if entry.image_path %}
             <div class="mt-3 ml-11">
-                <img src="{{ url_for('static', filename=entry.image_path) }}" 
-                     alt="Entry image" 
+                <img src="{{ url_for('static', filename=entry.image_path) }}"
+                     alt="Entry image"
                      class="max-w-md h-auto rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                      onclick="openImageModal('{{ url_for('static', filename=entry.image_path) }}')">
             </div>
@@ -205,10 +178,18 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- Unhide All button placed below the entries list -->
+    <div class="mt-4 text-center">
+        <button id="unhide-all-btn" type="button" onclick="unhideAll()"
+                class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+            Unhide All Entries
+        </button>
+    </div>
+
     {% else %}
     <div class="text-center py-12">
-        <div
-                class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full mb-4">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full mb-4">
             <span class="text-2xl">☁️</span>
         </div>
         <p class="text-gray-500 mb-2">No entries yet</p>
@@ -233,15 +214,11 @@
     </div>
 </div>
 
-<!-- ✨ Dropdown menu script ✨ -->
+<!-- ✨ Dropdown, hide and image modal scripts ✨ -->
 <script>
     function toggleDropdown(id) {
         document.querySelectorAll('[id^="menu-"]').forEach(el => {
-            if (el.id === id) {
-                el.classList.toggle('hidden');
-            } else {
-                el.classList.add('hidden');
-            }
+            if (el.id === id) { el.classList.toggle('hidden'); } else { el.classList.add('hidden'); }
         });
     }
     window.addEventListener('click', function (e) {
@@ -255,15 +232,74 @@
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
         modal.onclick = function() { document.body.removeChild(modal); };
-        
         const img = document.createElement('img');
         img.src = imageSrc;
         img.className = 'max-w-4xl max-h-[90vh] rounded-lg';
         img.onclick = function(e) { e.stopPropagation(); };
-        
         modal.appendChild(img);
         document.body.appendChild(modal);
     }
+
+    // Temporary hide support using localStorage
+    function getHiddenEntries() {
+        try {
+            const raw = localStorage.getItem('hidden_entries');
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+    function saveHiddenEntries(arr) {
+        localStorage.setItem('hidden_entries', JSON.stringify(arr));
+    }
+    function applyHiddenStates() {
+        const hidden = getHiddenEntries();
+        hidden.forEach(id => {
+            const el = document.getElementById('entry-' + id);
+            if (el) el.classList.add('hidden');
+            const btn = document.getElementById('hide-btn-' + id);
+            if (btn) btn.textContent = 'Unhide';
+        });
+    }
+    function toggleHide(id) {
+        const el = document.getElementById('entry-' + id);
+        if (!el) return;
+        const arr = getHiddenEntries();
+        const idx = arr.indexOf(id);
+        const btn = document.getElementById('hide-btn-' + id);
+        if (idx === -1) {
+            arr.push(id);
+            el.classList.add('hidden');
+            if (btn) btn.textContent = 'Unhide';
+        } else {
+            arr.splice(idx, 1);
+            el.classList.remove('hidden');
+            if (btn) btn.textContent = 'Hide';
+        }
+        saveHiddenEntries(arr);
+        // close dropdown if open
+        document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
+    }
+
+    // Unhide all entries: clear stored hidden ids and reveal all entry elements
+    function unhideAll() {
+        try {
+            localStorage.removeItem('hidden_entries');
+        } catch (e) { /* ignore */ }
+
+        document.querySelectorAll('[id^="entry-"]').forEach(el => {
+            el.classList.remove('hidden');
+        });
+
+        document.querySelectorAll('[id^="hide-btn-"]').forEach(btn => {
+            btn.textContent = 'Hide';
+        });
+
+        // close dropdowns if any are open
+        document.querySelectorAll('[id^="menu-"]').forEach(m => m.classList.add('hidden'));
+    }
+
+    document.addEventListener('DOMContentLoaded', applyHiddenStates);
 </script>
 
 {% endblock %}
