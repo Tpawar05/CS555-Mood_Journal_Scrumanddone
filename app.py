@@ -347,9 +347,18 @@ def edit_entry(entry_id):
 
 @app.route('/export/<int:entry_id>')
 def export_single_entry(entry_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    user_id = session.get('user_id')
     entry = MoodEntry.query.get_or_404(entry_id)
-    
-    # Check if entry is private; if so, deny access
+
+    # Only export own entries
+    if entry.user_id != user_id:
+        flash('You can only export your own entries.', 'error')
+        return redirect(url_for('logs'))
+
+    # Cannot export private entries
     if getattr(entry, 'is_private', False):
         flash('Cannot export private entries.', 'error')
         return redirect(url_for('logs'))
@@ -380,15 +389,24 @@ def export_single_entry(entry_id):
     response.headers["Content-type"] = "text/csv"
     return response
 
-
 @app.route('/export-all')
 def export_all_entries():
-    # Only export non-private entries (check if column exists for backward compatibility)
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    user_id = session.get('user_id')
+
+    # Only export entries belonging to the logged-in user
     try:
-        entries = MoodEntry.query.filter_by(is_private=False).order_by(MoodEntry.entry_date.desc()).all()
+        entries = MoodEntry.query.filter(
+            MoodEntry.user_id == user_id,
+            MoodEntry.is_private == False
+        ).order_by(MoodEntry.entry_date.desc()).all()
     except Exception:
-        # Fallback if is_private column doesn't exist
-        entries = MoodEntry.query.order_by(MoodEntry.entry_date.desc()).all()
+        # Fallback if is_private doesn't exist
+        entries = MoodEntry.query.filter(
+            MoodEntry.user_id == user_id
+        ).order_by(MoodEntry.entry_date.desc()).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -399,9 +417,12 @@ def export_all_entries():
     ])
 
     for entry in entries:
+        ed = _to_date(entry.entry_date) or entry.entry_date
+        ed_str = ed.strftime("%Y-%m-%d") if hasattr(ed, 'strftime') else str(ed)
+
         writer.writerow([
             entry.id,
-            (_to_date(entry.entry_date) or entry.entry_date).strftime("%Y-%m-%d") if (_to_date(entry.entry_date) or entry.entry_date) else "",
+            ed_str,
             entry.mood_label,
             entry.mood_rating,
             entry.notes or "",
@@ -414,9 +435,13 @@ def export_all_entries():
     response.headers["Content-type"] = "text/csv"
     return response
 
-
 @app.route('/export-range')
 def export_range():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    user_id = session.get('user_id')
+
     start = request.args.get('start_date')
     end = request.args.get('end_date')
 
@@ -431,16 +456,18 @@ def export_range():
         flash("Invalid date format.", "error")
         return redirect(url_for('logs'))
 
-    # Only export non-private entries
+    # Only export the logged-in user's non-private entries within range
     try:
         entries = MoodEntry.query.filter(
+            MoodEntry.user_id == user_id,
             MoodEntry.entry_date >= start_date,
             MoodEntry.entry_date <= end_date,
             MoodEntry.is_private == False
         ).order_by(MoodEntry.entry_date.asc()).all()
     except Exception:
-        # Fallback if is_private column doesn't exist
+        # Fallback if is_private doesn't exist
         entries = MoodEntry.query.filter(
+            MoodEntry.user_id == user_id,
             MoodEntry.entry_date >= start_date,
             MoodEntry.entry_date <= end_date
         ).order_by(MoodEntry.entry_date.asc()).all()
@@ -456,6 +483,7 @@ def export_range():
     for entry in entries:
         ed = _to_date(entry.entry_date) or entry.entry_date
         ed_str = ed.strftime("%Y-%m-%d") if hasattr(ed, 'strftime') else str(ed)
+
         writer.writerow([
             entry.id,
             ed_str,
@@ -470,6 +498,7 @@ def export_range():
     response.headers["Content-Disposition"] = f"attachment; filename=entries_{start}_to_{end}.csv"
     response.headers["Content-type"] = "text/csv"
     return response
+
 
 
 @app.route('/logout')
