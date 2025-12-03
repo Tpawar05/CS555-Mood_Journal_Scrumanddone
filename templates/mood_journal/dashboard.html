@@ -37,6 +37,14 @@
 {% endblock %}
 
 {% block content %}
+
+{% if reminder_banner %}
+<div class="mb-6 p-4 bg-yellow-100 text-yellow-800 rounded-lg border border-yellow-300 text-center font-medium">
+    You haven't logged your mood today
+</div>
+{% endif %}
+
+
 <div class="max-w-7xl mx-auto">
   <div class="p-4">
     <h1 class="text-2xl font-bold mb-4">Mood Dashboard - {{ current_month }}</h1>

@@ -155,12 +155,30 @@ def register():
 
     return render_template('home/register.html')
 
-
 @app.route('/home')
 def home():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    return render_template('home/index.html', page_id='home')
+
+    user_id = session.get('user_id')
+    today = datetime.utcnow().date()
+
+    # check if user has logged today
+    has_logged_today = MoodEntry.query.filter_by(
+        user_id=user_id,
+        entry_date=today
+    ).first() is not None
+
+    reminder_banner_home = None
+    if not has_logged_today:
+        reminder_banner_home = "Don’t forget to log your mood today"
+
+    return render_template(
+        'home/index.html',
+        page_id='home',
+        reminder_banner_home=reminder_banner_home
+    )
+
 
 
 @app.route('/profile')
@@ -617,6 +635,18 @@ def dashboard():
     # Sort badges
     badges.sort()
 
+
+    # --- AUTO DAILY REMINDER FOR DASHBOARD ---
+    today_date = datetime.utcnow().date()
+    has_logged_today = any(_to_date(e.entry_date) == today_date for e in all_entries)
+
+
+
+
+    reminder_banner = None
+    if not has_logged_today:
+        reminder_banner = "You haven't logged your mood today"
+
     return render_template(
         'mood_journal/dashboard.html',
         calendar_dates=calendar_dates,
@@ -634,7 +664,8 @@ def dashboard():
         summary_message=summary_message,
         current_streak=current_streak,
         longest_streak=longest_streak,
-        badges=badges
+        badges=badges,
+        reminder_banner=reminder_banner
     )
 
 
