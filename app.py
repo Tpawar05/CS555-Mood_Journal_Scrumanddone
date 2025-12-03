@@ -386,7 +386,6 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-
 @app.route('/dashboard')
 def dashboard():
     if not session.get('logged_in'):
@@ -404,6 +403,8 @@ def dashboard():
     except (TypeError, ValueError):
         year = today.year
         month = today.month
+        
+    calendar.setfirstweekday(calendar.SUNDAY)
 
     cal = calendar.monthcalendar(year, month)
 
@@ -452,7 +453,6 @@ def dashboard():
         if r <= 8:
             return "good"
         return "excellent"
-
 
     # Build full calendar data
     calendar_dates = []
@@ -537,7 +537,6 @@ def dashboard():
         week_sums[idx] += e.mood_rating
         week_counts[idx] += 1
 
-
     weekly_trend = [
         round(week_sums[i] / week_counts[i], 1) if week_counts[i] else None
         for i in range(7)
@@ -549,18 +548,21 @@ def dashboard():
         day_vals = [e.mood_rating for e in entries if _to_date(e.entry_date) == d]
         last7.append(round(sum(day_vals) / len(day_vals), 1) if day_vals else None)
 
+    #  STREAK CALCULATION (FIXED)
+    # -------------------------------------
+    all_entries = MoodEntry.query.filter_by(user_id=user_id).all()
 
-    #  STREAK CALCULATION
-    # ---------------------------------------------------
-    all_entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.entry_date.asc()).all()
-    # Normalize dates
-    entry_dates = sorted({_to_date(e.entry_date) for e in all_entries if _to_date(e.entry_date)})
+    # Normalize and group by date (ignore duplicates)
+    cleaned_dates = { _to_date(e.entry_date) for e in all_entries if _to_date(e.entry_date) }
+
+    # Remove None and sort
+    entry_dates = sorted(d for d in cleaned_dates if d is not None)
 
     current_streak = 0
     longest_streak = 0
 
     if entry_dates:
-        # For longest streak: go thru sorted list
+        # Longest streak
         streak = 1
         for i in range(1, len(entry_dates)):
             if entry_dates[i] == entry_dates[i-1] + timedelta(days=1):
@@ -570,8 +572,8 @@ def dashboard():
                 streak = 1
         longest_streak = max(longest_streak, streak)
 
-        # For current streak
-        today_date = date.today()
+        # Current streak
+        today_date = datetime.utcnow().date()  # <<< IMPORTANT FIX
         if entry_dates[-1] == today_date:
             current_streak = 1
             i = len(entry_dates) - 1
@@ -579,7 +581,6 @@ def dashboard():
                 current_streak += 1
                 i -= 1
         elif entry_dates[-1] == today_date - timedelta(days=1):
-            # If yesterday logged, count backward
             current_streak = 1
             i = len(entry_dates) - 1
             while i > 0 and entry_dates[i] == entry_dates[i-1] + timedelta(days=1):
@@ -587,7 +588,6 @@ def dashboard():
                 i -= 1
         else:
             current_streak = 0
-
 
     #  BADGE LOGIC
 
@@ -617,9 +617,6 @@ def dashboard():
     # Sort badges
     badges.sort()
 
-
-
-
     return render_template(
         'mood_journal/dashboard.html',
         calendar_dates=calendar_dates,
@@ -639,6 +636,7 @@ def dashboard():
         longest_streak=longest_streak,
         badges=badges
     )
+
 
 
 @app.route('/account', methods=['GET', 'POST'])
