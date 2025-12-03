@@ -6,6 +6,7 @@ This version ensures CI runs all tests in-memory and isolated.
 import pytest
 from app import app as flask_app
 from extensions import db
+from models import MoodEntry, User  # Import models to ensure they are loaded
 
 
 @pytest.fixture(scope="session")
@@ -21,6 +22,9 @@ def app():
     )
 
     with flask_app.app_context():
+        # Drop all tables first to ensure fresh schema
+        db.drop_all()
+        # Create all tables with current model definitions
         db.create_all()
         yield flask_app
         db.session.remove()
