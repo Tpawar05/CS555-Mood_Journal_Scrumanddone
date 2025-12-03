@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify
 from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
 import os
 import csv
@@ -234,6 +234,36 @@ def delete_entry(entry_id):
     return redirect(url_for('logs'))
 
 
+@app.route('/toggle-privacy/<int:entry_id>', methods=['POST'])
+def toggle_privacy(entry_id):
+    # Support both normal form posts and AJAX requests
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+              request.headers.get('Accept', '').find('application/json') != -1
+
+    if not session.get('logged_in'):
+        if is_ajax:
+            return jsonify({'error': 'login_required'}), 401
+        return redirect(url_for('login'))
+
+    user_id = session.get('user_id')
+    entry = MoodEntry.query.get_or_404(entry_id)
+    if entry.user_id != user_id:
+        if is_ajax:
+            return jsonify({'error': 'not_owner'}), 403
+        flash('You can only modify your own entries', 'error')
+        return redirect(url_for('logs'))
+
+    # Use getattr for safe attribute access with fallback
+    entry.is_private = not getattr(entry, 'is_private', False)
+    db.session.commit()
+    status = 'locked (private)' if entry.is_private else 'unlocked (public)'
+    if is_ajax:
+        return jsonify({'is_private': entry.is_private, 'status': status}), 200
+
+    flash(f'Entry {status}!', 'success')
+    return redirect(url_for('logs'))
+
+
 @app.route('/edit/<int:entry_id>', methods=['GET', 'POST'])
 def edit_entry(entry_id):
     if not session.get('logged_in'):
@@ -294,6 +324,11 @@ def edit_entry(entry_id):
 @app.route('/export/<int:entry_id>')
 def export_single_entry(entry_id):
     entry = MoodEntry.query.get_or_404(entry_id)
+    
+    # Check if entry is private; if so, deny access
+    if getattr(entry, 'is_private', False):
+        flash('Cannot export private entries.', 'error')
+        return redirect(url_for('logs'))
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -324,7 +359,12 @@ def export_single_entry(entry_id):
 
 @app.route('/export-all')
 def export_all_entries():
-    entries = MoodEntry.query.order_by(MoodEntry.entry_date.desc()).all()
+    # Only export non-private entries (check if column exists for backward compatibility)
+    try:
+        entries = MoodEntry.query.filter_by(is_private=False).order_by(MoodEntry.entry_date.desc()).all()
+    except Exception:
+        # Fallback if is_private column doesn't exist
+        entries = MoodEntry.query.order_by(MoodEntry.entry_date.desc()).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -367,10 +407,19 @@ def export_range():
         flash("Invalid date format.", "error")
         return redirect(url_for('logs'))
 
-    entries = MoodEntry.query.filter(
-        MoodEntry.entry_date >= start_date,
-        MoodEntry.entry_date <= end_date
-    ).order_by(MoodEntry.entry_date.asc()).all()
+    # Only export non-private entries
+    try:
+        entries = MoodEntry.query.filter(
+            MoodEntry.entry_date >= start_date,
+            MoodEntry.entry_date <= end_date,
+            MoodEntry.is_private == False
+        ).order_by(MoodEntry.entry_date.asc()).all()
+    except Exception:
+        # Fallback if is_private column doesn't exist
+        entries = MoodEntry.query.filter(
+            MoodEntry.entry_date >= start_date,
+            MoodEntry.entry_date <= end_date
+        ).order_by(MoodEntry.entry_date.asc()).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
