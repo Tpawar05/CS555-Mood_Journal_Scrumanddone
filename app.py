@@ -234,6 +234,30 @@ def delete_entry(entry_id):
     return redirect(url_for('logs'))
 
 
+@app.route('/delete-all-entries', methods=['POST'])
+def delete_all_entries():
+    """Delete all entries for the currently logged-in user."""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Please log in to perform this action', 'error')
+        return redirect(url_for('login'))
+
+    # Remove all mood entries for this user
+    try:
+        MoodEntry.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        db.session.commit()
+        flash('All entries deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        app.logger.exception('Failed to delete all entries')
+        flash('Failed to delete all entries', 'error')
+
+    return redirect(url_for('logs'))
+
+
 @app.route('/toggle-privacy/<int:entry_id>', methods=['POST'])
 def toggle_privacy(entry_id):
     # Support both normal form posts and AJAX requests
@@ -470,16 +494,26 @@ def dashboard():
     except (TypeError, ValueError):
         year = today.year
         month = today.month
-        
+
+    # Normalize month/year so month wraps across years (e.g., month=13 -> month=1, year+1)
+    # Convert to a zero-based month index and recompute year/month
+    total_months = year * 12 + (month - 1)
+    norm_year = total_months // 12
+    norm_month = (total_months % 12) + 1
+    year = norm_year
+    month = norm_month
+
     calendar.setfirstweekday(calendar.SUNDAY)
 
     cal = calendar.monthcalendar(year, month)
 
+    # start is first day of the normalized month; end is first day of next month
     start_date = date(year, month, 1)
-    if month == 12:
-        end_date = date(year + 1, 1, 1)
-    else:
-        end_date = date(year, month + 1, 1)
+    # compute next month/year using the same normalization logic
+    next_total = year * 12 + (month - 1) + 1
+    next_year = next_total // 12
+    next_month = (next_total % 12) + 1
+    end_date = date(next_year, next_month, 1)
 
     entries = MoodEntry.query.filter(
         MoodEntry.user_id == user_id,
