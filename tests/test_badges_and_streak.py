@@ -95,7 +95,7 @@ def test_entry_count_badges(client, app):
         login(client)
 
         today = date.today()
-        dates = [(today - timedelta(days=i)) for i in range(12)]  # 12 entries
+        dates = [(today + timedelta(days=i)) for i in range(12)]  # 12 entries
         add_entries(user.id, dates)
 
         res = client.get("/dashboard")

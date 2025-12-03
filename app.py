@@ -832,16 +832,29 @@ def seed_test_entries():
         today = datetime.utcnow().date()
 
         sample_entries = [
-            MoodEntry(user_id=1, entry_date=today, mood_rating=8, mood_label="Happy", notes="Had a great day with friends!"),
+
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=0), mood_rating=8, mood_label="Happy", notes="Had a great day with friends!"),
             MoodEntry(user_id=1, entry_date=today - timedelta(days=1), mood_rating=4, mood_label="Tired", notes="Stayed up late finishing hw"),
             MoodEntry(user_id=1, entry_date=today - timedelta(days=2), mood_rating=6, mood_label="Chill", notes="Walked and coffee shop visit"),
             MoodEntry(user_id=1, entry_date=today - timedelta(days=3), mood_rating=2, mood_label="Overwhelmed", notes="Too many assignments this week"),
-            MoodEntry(user_id=1, entry_date=today - timedelta(days=5), mood_rating=9, mood_label="Excited", notes="Day was great today!!"),
-            MoodEntry(user_id=1, entry_date=today - timedelta(days=7), mood_rating=3, mood_label="Unmotivated", notes="Felt sluggish all day"),
-            MoodEntry(user_id=1, entry_date=today - timedelta(days=10), mood_rating=7, mood_label="Productive", notes="Finally cleaned the apartment"),
-            MoodEntry(user_id=1, entry_date=today - timedelta(days=12), mood_rating=5, mood_label="Neutral", notes="Average day, just went with the flow"),
-            MoodEntry(user_id=1, entry_date=today - timedelta(days=14), mood_rating=10, mood_label="Euphoric", notes="Got good news!"),
-            MoodEntry(user_id=1, entry_date=today - timedelta(days=20), mood_rating=1, mood_label="Exhausted", notes="Midterm season😵‍💫"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=4), mood_rating=9, mood_label="Excited", notes="Day was great today!!"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=5), mood_rating=3, mood_label="Unmotivated", notes="Felt sluggish all day"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=6), mood_rating=7, mood_label="Productive", notes="Finally cleaned the apartment"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=7), mood_rating=5, mood_label="Neutral", notes="Average day, just went with the flow"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=8), mood_rating=10, mood_label="Euphoric", notes="Got good news!"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=9), mood_rating=1, mood_label="Exhausted", notes="Midterm season😵‍💫"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=10), mood_rating=4, mood_label="Stressed", notes="Cramming for the first exam"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=11), mood_rating=7, mood_label="Content", notes="Nice dinner with friends"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=12), mood_rating=8, mood_label="Inspired", notes="Had a really interesting lecture today"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=13), mood_rating=5, mood_label="Bored", notes="Raining all day, stuck inside"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=14), mood_rating=2, mood_label="Sad", notes="Homesick today 😔"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=15), mood_rating=6, mood_label="Steady", notes="Got into a good flow with coding project"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=16), mood_rating=9, mood_label="Accomplished", notes="Finished the group presentation early!"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=17), mood_rating=3, mood_label="Groggy", notes="8am classes are a struggle"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=18), mood_rating=5, mood_label="Distracted", notes="Couldn't focus on reading at all"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=19), mood_rating=8, mood_label="Refreshed", notes="Slept for 10 hours straight"),
+            MoodEntry(user_id=1, entry_date=today - timedelta(days=20), mood_rating=7, mood_label="Hopeful", notes="Applied to a few internships"),
+
         ]
 
         db.session.add_all(sample_entries)
