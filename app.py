@@ -193,7 +193,7 @@ def home():
 
 
 
-@app.route('/profile')
+@app.route('/profile', methods=['GET', 'POST'])
 def profile():
     """Display user's personal information"""
     if not session.get('logged_in'):
@@ -205,6 +205,47 @@ def profile():
         return redirect(url_for('login'))
 
     user = User.query.get_or_404(user_id)
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'update_profile':
+            new_username = request.form.get('username', '').strip()
+            new_email = request.form.get('email', '').strip()
+
+            # Validate username
+            if not new_username:
+                flash('Username cannot be empty', 'error')
+                return redirect(url_for('profile'))
+
+            # Check if username is already taken by another user
+            existing_user = User.query.filter_by(username=new_username).first()
+            if existing_user and existing_user.id != user.id:
+                flash('Username already taken. Please choose a different username.', 'error')
+                return redirect(url_for('profile'))
+
+            # Validate email
+            if not new_email:
+                flash('Email cannot be empty', 'error')
+                return redirect(url_for('profile'))
+
+            # Basic email validation
+            if '@' not in new_email or '.' not in new_email.split('@')[1]:
+                flash('Please enter a valid email address', 'error')
+                return redirect(url_for('profile'))
+
+            # Check if email is already taken by another user
+            existing_email = User.query.filter_by(email=new_email).first()
+            if existing_email and existing_email.id != user.id:
+                flash('Email already taken. Please use a different email address.', 'error')
+                return redirect(url_for('profile'))
+
+            # Update username and email
+            user.username = new_username
+            user.email = new_email
+            db.session.commit()
+            flash('Profile updated successfully', 'success')
+            return redirect(url_for('profile'))
 
     total_entries = MoodEntry.query.filter_by(user_id=user_id).count()
     recent_entries = MoodEntry.query.filter_by(user_id=user_id).order_by(MoodEntry.timestamp.desc()).limit(5).all()
@@ -822,6 +863,44 @@ def account():
     if request.method == 'POST':
         action = request.form.get('action')
 
+        if action == 'update_profile':
+            new_username = request.form.get('username', '').strip()
+            new_email = request.form.get('email', '').strip()
+
+            # Validate username
+            if not new_username:
+                flash('Username cannot be empty', 'error')
+                return redirect(url_for('account'))
+
+            # Check if username is already taken by another user
+            existing_user = User.query.filter_by(username=new_username).first()
+            if existing_user and existing_user.id != user.id:
+                flash('Username already taken. Please choose a different username.', 'error')
+                return redirect(url_for('account'))
+
+            # Validate email
+            if not new_email:
+                flash('Email cannot be empty', 'error')
+                return redirect(url_for('account'))
+
+            # Basic email validation
+            if '@' not in new_email or '.' not in new_email.split('@')[1]:
+                flash('Please enter a valid email address', 'error')
+                return redirect(url_for('account'))
+
+            # Check if email is already taken by another user
+            existing_email = User.query.filter_by(email=new_email).first()
+            if existing_email and existing_email.id != user.id:
+                flash('Email already taken. Please use a different email address.', 'error')
+                return redirect(url_for('account'))
+
+            # Update username and email
+            user.username = new_username
+            user.email = new_email
+            db.session.commit()
+            flash('Profile updated successfully', 'success')
+            return redirect(url_for('account'))
+
         if action == 'change_password':
             current = request.form.get('current_password')
             new = request.form.get('new_password')
@@ -849,6 +928,14 @@ def account():
             return redirect(url_for('login'))
 
     return render_template('mood_journal/account.html', user=user)
+
+
+@app.route('/resources')
+def resources():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    return render_template('mood_journal/resources.html')
 
 
 @app.route('/check-password', methods=['POST'])
